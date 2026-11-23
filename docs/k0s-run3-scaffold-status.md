@@ -1,18 +1,20 @@
 # K0sAnalysisRun3 scaffold status (M0–M3 + analyzer ports)
 
 **Date:** 2026-11-23  
-**Workers:** scaffold `bc-265d0870-0e0c-59b8-a256-e1f8ca0d169c`; V0 port `bc-7f1255ab-c1f3-55e7-b57f-ee434d87b2b9`; Trigger/Lepton/Jet `bc-44f5edb1-be76-5660-85bc-e4405919c164`; cmsRun smoke docs `bc-8f7a2f29-bf08-59ec-958b-47c3ddd3a58c`; samples stubs `bc-9a1ce0b2-114f-5465-bc40-93e38dd4952a`; offline fitting/analysis/v0building `bc-4b344982-5a02-56fa-89c4-1a52974a70d2`  
-**Outcome:** Context-only package under Project store. **Kalman `V0Analyzer` + lean Trigger / Lepton / Jet + genWeight/PU hooks** are real upstream ports. **Offline `fitting/`, `analysis/`, `v0building/` ported** (RooFit path; DisplacedV0 branch adaptations; AN sideband + low-Δ2D norm). Local **cmsRun/scram smoke path** documented (`docs/cmsrun-smoke-test.md`); VM has no CMSSW so build was not executed. **M2 sample/cert/HLT/DeepJet stubs filled with concrete 2024 DAS/JSON patterns** (full names marked `TODO-VERIFY`). No GitHub create/push/PR. HepTools untouched.
+**Workers:** scaffold `bc-265d0870-0e0c-59b8-a256-e1f8ca0d169c`; V0 port `bc-7f1255ab-c1f3-55e7-b57f-ee434d87b2b9`; Trigger/Lepton/Jet `bc-44f5edb1-be76-5660-85bc-e4405919c164`; cmsRun smoke docs `bc-8f7a2f29-bf08-59ec-958b-47c3ddd3a58c`; samples stubs `bc-9a1ce0b2-114f-5465-bc40-93e38dd4952a`; offline fitting/analysis/v0building `bc-4b344982-5a02-56fa-89c4-1a52974a70d2`; GitHub push/PR `bc-7846fe27-5713-52b8-8345-4ff9a13f0cb7`  
+**Outcome:** Package pushed to GitHub. **Kalman `V0Analyzer` + lean Trigger / Lepton / Jet + genWeight/PU hooks** are real upstream ports. **Offline `fitting/`, `analysis/`, `v0building/` ported** (RooFit path; DisplacedV0 branch adaptations; AN sideband + low-Δ2D norm). Local **cmsRun/scram smoke path** documented (`docs/cmsrun-smoke-test.md`); VM has no CMSSW so build was not executed. **M2 sample/cert/HLT/DeepJet stubs filled with concrete 2024 DAS/JSON patterns** (full names marked `TODO-VERIFY`). **PR open:** https://github.com/lwang046/K0sAnalysisRun3/pull/1. HepTools untouched.
 
 ---
 
 ## Location (Context)
 
-All package files live here (not on GitHub yet):
+Context copy (source of truth during scaffold):
 
 ```text
 /cursor/stores/self/code/K0sAnalysisRun3/
 ```
+
+GitHub tree: `https://github.com/lwang046/K0sAnalysisRun3` (branch `cursor/push-context-package-0cb7` → PR #1). Repo `docs/` mirrors the method/plan/smoke/status docs below.
 
 Canonical docs remain:
 
@@ -28,22 +30,19 @@ Canonical docs remain:
 | Item | Status |
 | --- | --- |
 | Context tree | **`/cursor/stores/self/code/K0sAnalysisRun3/`** — M0–M3 + V0/Trigger/Lepton/Jet + offline fitting/analysis/v0building |
-| Target GitHub | `https://github.com/lwang046/K0sAnalysisRun3` — **still does not exist** |
-| PR URL | **none** — blocked (no repo to push/PR against) |
-| HepTools | Untouched (verified clean on `main`) |
+| Target GitHub | `https://github.com/lwang046/K0sAnalysisRun3` — **exists** |
+| Branch | `cursor/push-context-package-0cb7` |
+| PR URL | **https://github.com/lwang046/K0sAnalysisRun3/pull/1** |
+| HepTools | Untouched |
 
-### Latest create attempt (2026-11-23, worker `bc-05827a22-30d5-5f32-9788-a72f8c0ef676`)
+### Push / PR (2026-11-23, worker `bc-7846fe27-5713-52b8-8345-4ff9a13f0cb7`)
 
-**Blocked by GitHub App permissions.** Exact errors:
+- Copied Context package into repo root; added docs under `docs/`.
+- Commit `6a7381b` on `cursor/push-context-package-0cb7`; pushed; opened PR #1.
 
-1. `gh repo create lwang046/K0sAnalysisRun3 --public` →  
-   `GraphQL: Resource not accessible by integration (createRepository)`
-2. `gh repo fork LukaLambrecht/K0sAnalysis --fork-name K0sAnalysisRun3` →  
-   `failed to fork: HTTP 403: Resource not accessible by integration (https://api.github.com/repos/LukaLambrecht/K0sAnalysis/forks)`
-3. REST `POST /user/repos` → `403 Rate Limit Exceeded` (secondary; same integration token)
-4. Installation repos visible to this token: **only** `lwang046/HepTools`
+### Prior create attempt (2026-11-23, worker `bc-05827a22-30d5-5f32-9788-a72f8c0ef676`)
 
-**Unblock:** create empty public `lwang046/K0sAnalysisRun3` via GitHub UI or a personal PAT with `repo` + administration, then grant the Cursor GitHub App access to that repo (or all repos). Re-run push/PR after the App can see it.
+Previously blocked by GitHub App permissions (`createRepository` / fork 403). Repo was created outside the agent; push/PR succeeded once the App had access.
 
 ---
 
@@ -57,7 +56,7 @@ Canonical docs remain:
 | **M3** `ntuplizer/DisplacedV0` | **Analyzers ported; smoke docs ready** | V0 + Trigger + Lepton + Jet + genWeight/PU; plugin + cfi wired; local cmsRun path in `docs/cmsrun-smoke-test.md` (build not run — no CMSSW on VM) |
 | Offline `fitting/` + `analysis/` | **Ported** | RooFit/TF1 path; Run3 bins + sideband + low-Δ2D norm |
 | Offline `v0building/` AN cuts | **Ported + adapted** | `v0selections.py` + DisplacedV0-aware `v0builder.py` |
-| GitHub PR | **Blocked** | App cannot `createRepository` / fork; see Repo / PR section |
+| GitHub PR | **Open** | https://github.com/lwang046/K0sAnalysisRun3/pull/1 |
 
 ---
 
