@@ -8,12 +8,16 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 
 | File | Role |
 | --- | --- |
+| `config_defaults_run3.py` | Shared bins, `normrange`, HLT, DeepJet WP, first era |
 | `config_ksvars.py` | 1D \(\Delta_{2D}\) bins (method §2.6) + sideband + `normrange` |
 | `config_ks2dvars.py` | 2D \(C(\Delta_{2D},p_T)\) |
 | `config_controlvars.py` | DY controls (`_nimloth_Mll`, muon \(p_T/\eta\)) |
 | `config_lavars.py` | \(\Lambda\) diagnostic |
+| `example_input_run2024d.json` | Template `datain`/`mcin` for `mcvsdata_fill.py` |
 | `mcvsdata_fill.py` | Core fill: sideband → yields → low-\(\Delta_{2D}\) scale |
 | `mcvsdata_submit*.py` | Condor/local batch |
+
+Ordered first-era commands: [`docs/first-c-delta2d-recipe.md`](../docs/first-c-delta2d-recipe.md).
 
 ### Branch schema (post-v0building)
 

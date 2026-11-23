@@ -13,10 +13,12 @@
 
 #include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
+#include "FWCore/Utilities/interface/ESGetToken.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
@@ -24,6 +26,8 @@
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
+#include "MagneticField/Engine/interface/MagneticField.h"
+#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
@@ -53,6 +57,8 @@ public:
   edm::EDGetTokenT<edm::TriggerResults> triggerToken;
   edm::EDGetTokenT<GenEventInfoProduct> genEventInfoToken;
   edm::EDGetTokenT<std::vector<PileupSummaryInfo>> pileUpToken;
+  // Optional ES MagField (IdealMagneticFieldRecord). Used when useESMagneticField_.
+  edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
 
   friend class V0Analyzer;
   friend class TriggerAnalyzer;
@@ -62,6 +68,8 @@ public:
 private:
   TTree* tree_{nullptr};
   bool isData_{true};
+  /** If true: MagField from EventSetup. If false: OAEParametrizedMagneticField("3_8T"). */
+  bool useESMagneticField_{false};
 
   unsigned long long event_{0};
   unsigned int run_{0}, luminosityBlock_{0};

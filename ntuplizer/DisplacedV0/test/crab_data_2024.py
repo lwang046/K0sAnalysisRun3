@@ -1,9 +1,9 @@
-"""CRAB3 stub — one 2024 Muon MiniAOD era. Fill from samples/data_muon_2024.txt."""
+"""CRAB3 stub — first era Run2024D Muon MiniAOD. Fill from samples/data_muon_2024.txt."""
 from CRABClient.UserUtilities import config
 
 config = config()
-# Prefer Run2024F or G after DAS + golden JSON check (plan §8).
-config.General.requestName = "DisplacedV0_Muon0_Run2024F"  # TODO-VERIFY era
+# First C(Δ2D) era: Run2024D (see samples/data_muon_2024.txt / conditions.md).
+config.General.requestName = "DisplacedV0_Muon0_Run2024D"  # TODO-VERIFY on DAS
 config.General.workArea = "crab_DisplacedV0_data"
 config.General.transferOutputs = True
 
@@ -12,7 +12,8 @@ config.JobType.psetName = "../python/test_data_onefile_cfg.py"  # replace with p
 config.JobType.outputFiles = ["displacedV0_data.root"]
 
 # TODO-VERIFY on DAS; also submit Muon1 with the same era / lumiMask.
-config.Data.inputDataset = "/Muon0/Run2024F-PromptReco-v1/MINIAOD"
+# If PromptReco missing, use MiniAODv6 parent of MINIv6NANOv15 (das parent query).
+config.Data.inputDataset = "/Muon0/Run2024D-PromptReco-v1/MINIAOD"
 config.Data.inputDBS = "global"
 config.Data.splitting = "LumiBased"
 config.Data.unitsPerJob = 50

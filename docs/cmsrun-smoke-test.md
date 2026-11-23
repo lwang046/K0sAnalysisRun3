@@ -108,30 +108,40 @@ Python import used by the cfgs is `from DisplacedV0.displacedV0_cfi import ...` 
 
 ---
 
-## 5. MagField / TransientTrackBuilder (V0 port risks)
+## 5. MagField / TransientTrackBuilder (V0 port)
 
-Current `V0Analyzer` does **not** use EventSetup for B-field. Per event it does:
+**Default (smoke-friendly):** `useESMagneticField=False` in `displacedV0_cfi.py`.
+`V0Analyzer` owns an `OAEParametrizedMagneticField("3_8T")` via `unique_ptr` and
+builds `reco::TransientTrack(track, bfield)` as upstream. No MagField ES products
+are required in the smoke cfg.
 
-```cpp
-MagneticField* bfield = new OAEParametrizedMagneticField("3_8T");
-// … reco::TransientTrack(track, bfield) …
-delete bfield;
+**Optional ES path:** set `useESMagneticField=True` (cfi or VarParsing on the
+one-file cfgs). `DisplacedV0Ntuple` then `esConsumes` `IdealMagneticFieldRecord`
+and passes that `MagneticField*` into the V0 fitter. Load in the cfg:
+
+```python
+process.load("Configuration.StandardSequences.MagneticField_cff")
+process.load("Configuration.Geometry.GeometryRecoDB_cff")
+process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ```
 
-Include (upstream path, still used):
-
-`MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h`
+Include hardening: `__has_include` prefers
+`MagneticField/ParametrizedEngine/interface/OAEParametrizedMagneticField.h`,
+else the upstream `…/src/…` path.
 
 | Risk on 14_0 / 15_0 | What to try |
 | --- | --- |
-| Compile fails on `.../src/OAEParametrizedMagneticField.h` | Check whether the header moved to `interface/`; update include only if the release tree confirms it |
-| `reco::TransientTrack(Track, MagneticField*)` removed/deprecated | Switch to `TransientTrackBuilder` from EventSetup (`ESGetToken`) |
-| Smoke cfg “missing MagField” | **Not required for current code** — parametric field is constructed in C++. Do **not** add `MagneticField_cff` unless migrating to ES |
-| Migrating to TransientTrackBuilder | Then load in cfg: `MagneticField_cff`, `Geometry.GeometryRecoDB_cff`, `TrackingTools/TransientTrack/TransientTrackBuilder_cfi`, and change `V0Analyzer` to get the builder from ES |
+| Compile fails on OAE header | `__has_include` switch already in `V0Analyzer.h`; confirm release tree |
+| `reco::TransientTrack(Track, MagField*)` removed/deprecated | Next step: `TransientTrackBuilder` from `TransientTrackRecord` (`ESGetToken`); cfg already loads the builder cfi when ES MagField is on |
+| Smoke cfg “missing MagField” with default False | Expected OK — OAE is in-process |
+| ES path fails without MagField_cff | Pass `useESMagneticField=True` only after loading sequences above |
 
-`"3_8T"` remains the correct Run-3 nominal field for the parametric engine; the modern pattern is still ES MagField + TransientTrackBuilder. Smoke success with the hard-coded path is enough for M3; treat ES migration as a follow-up if compile/link complains.
+`"3_8T"` remains the correct Run-3 nominal for the parametric engine. Prefer the
+ES MagField (and eventually TransientTrackBuilder) for production CRAB once smoke
+passes both modes.
 
-`BuildFile.xml` already `<use>`s `MagneticField/{Engine,ParametrizedEngine}` and `TrackingTools/TransientTrack`.
+`BuildFile.xml` `<use>`s `MagneticField/{Engine,ParametrizedEngine,Records}` and
+`TrackingTools/{TransientTrack,Records}`.
 
 ---
 

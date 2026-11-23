@@ -11,6 +11,7 @@
 <use name="SimDataFormats/PileupSummaryInfo"/>
 <use name="MagneticField/Engine"/>
 <use name="MagneticField/ParametrizedEngine"/>
+<use name="MagneticField/Records"/>
 <use name="TrackingTools/TransientTrack"/>
 <use name="TrackingTools/Records"/>
 <use name="TrackingTools/PatternTools"/>

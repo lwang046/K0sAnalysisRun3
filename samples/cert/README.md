@@ -1,8 +1,20 @@
 # Certification / luminosity / PU (2024)
 
 Do not commit large JSON blobs here unless needed for a frozen reproducibility tag.
-Record the **exact filename + run range + download date** in
-`/cursor/stores/self/code/K0sAnalysisRun3/conditions.md` when freezing an era.
+Record the **exact filename + run range + download date** in `conditions.md`
+when freezing an era.
+
+## First era (Run2024D)
+
+Use the full Collisions24 golden JSON and restrict CRAB / brilcalc to the
+Run2024D run range after looking up era boundaries (OMS / DQM / PdmV).
+
+| Item | Value |
+| --- | --- |
+| First analysis era | **Run2024D** |
+| Golden JSON (stub) | `Cert_Collisions2024_378981_386951_Golden.json` |
+| CRAB `lumiMask` | EOS path below (or a local copy) |
+| Era run bounds | **TODO-VERIFY** on OMS / golden JSON before brilcalc |
 
 ## Golden / muon JSON (Collisions24)
 
@@ -15,7 +27,7 @@ Record the **exact filename + run range + download date** in
 | CVMFS (when available) | `/cvmfs/.../CAF/certification/Collisions24/latest/` — **TODO-VERIFY** site-local path |
 
 **Run range in the filename above:** `378981`–`386951` (full 2024 golden as commonly cited).  
-**TODO-VERIFY** that this is still the latest file before CRAB; DQM may publish a wider or replacement range. Prefer the golden with the largest valid run span that covers the eras you process.
+**TODO-VERIFY** that this is still the latest file before CRAB; DQM may publish a wider or replacement range. Prefer the golden with the largest valid run span that covers Run2024D (and later eras you process).
 
 CRAB: set `config.Data.lumiMask` to the local/EOS path of the chosen JSON.
 
@@ -26,7 +38,7 @@ CRAB: set `config.Data.lumiMask` to the local/EOS path of the chosen JSON.
 | PU JSON / `pileup_JSON.txt` | `/eos/user/c/cmsdqm/www/CAF/certification/Collisions24/PileUp/` |
 | Per-era profiles | Often built with `brilcalc` / recommended `pileupCalc` or correctionlib recipe for Collisions24 |
 
-**TODO-VERIFY** the exact PU profile filename for the frozen eras (e.g. Run2024D–I style profiles used by other Run 3 analyses).
+**TODO-VERIFY** the exact PU profile filename for Run2024D (and later frozen eras). Offline fill defaults to `--nopileup` until profiles are wired under `reweighting/pileup/`.
 
 ## Luminosity
 
@@ -34,10 +46,10 @@ CRAB: set `config.Data.lumiMask` to the local/EOS path of the chosen JSON.
 # Example — fill normtag + JSON path from current CMS lumi recommendations
 brilcalc lumi -u /fb --normtag <current_normtag> \
   -i Cert_Collisions2024_378981_386951_Golden.json \
-  --begin <era_first_run> --end <era_last_run>
+  --begin <Run2024D_first_run> --end <Run2024D_last_run>
 ```
 
-Record integrated luminosity per era in `conditions.md`.
+Record integrated luminosity for Run2024D in `conditions.md`.
 
 ## DeepJet / BTV (cross-link)
 
