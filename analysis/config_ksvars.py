@@ -5,29 +5,41 @@
 # Tree schema (after v0building/v0builder.py):
 #   laurelin: _RPV (=Δ2D), _mass (=m_ππ), _pt, _weight, _nTrueInt
 # Sideband + low-Δ2D normalization follow AN-20-111 §7 / method §2.5–2.6.
+# Defaults (bins, HLT, DeepJet WP) live in config_defaults_run3.py.
 
 import numpy as np
 
-# Phase-1 layer-aware Δ2D bins [cm] (method §2.6 starting proposal)
-DELTA2D_BINS = [
-    0.0, 1.0, 2.0, 3.0, 5.0, 7.0, 11.0, 16.0, 22.0, 30.0, 40.0, 60.0, 90.0, 120.0
-]
-
-# Low-Δ2D normalization region N (method §2.5): first well-populated bins.
-# Revisit after first 2024 look (AN used ~[0, 0.5]; Run3 PU may prefer [0, 2]).
-NORM_DELTA2D = [0.0, 2.0]
+from config_defaults_run3 import (
+    BRANCH_DELTA2D,
+    BRANCH_MASS,
+    DELTA2D_BINS,
+    DEEPJET_BRANCH,
+    DEEPJET_LOOSE_WP,
+    ERA_LABEL,
+    FIRST_ERA,
+    HLT_BASELINE,
+    MASS_SIDE_BINS,
+    NORM_DELTA2D,
+    TREE_KS,
+)
 
 config = ({
-    'rpv': {'variablename': '_RPV',
+    'rpv': {'variablename': BRANCH_DELTA2D,
             'xaxtitle': '#Delta_{2D} (cm)',
             'yaxtitle': 'Reconstructed vertices',
-            'treename': 'laurelin',
-            'extrainfos': ['K^{0}_{S} candidates', 'Run3 / 2024'],
+            'treename': TREE_KS,
+            'extrainfos': [
+              'K^{0}_{S} candidates',
+              ERA_LABEL,
+              'HLT: ' + HLT_BASELINE,
+              'DeepJet loose WP {:.4f} ({})'.format(DEEPJET_LOOSE_WP, DEEPJET_BRANCH),
+              'First era: ' + FIRST_ERA,
+            ],
             'bkgmodes': {
               'bkgdefault': {'type': None, 'info': 'Background not subtracted'},
               'bkgsideband': {'type': 'sideband', 'info': 'Background subtracted',
-                              'sidevariable': '_mass',
-                              'sidebins': np.linspace(0.44, 0.56, num=31, endpoint=True)},
+                              'sidevariable': BRANCH_MASS,
+                              'sidebins': MASS_SIDE_BINS},
             },
             'bins': {
               'finebins': np.linspace(0, 20, num=41, endpoint=True),
@@ -39,19 +51,19 @@ config = ({
               'normeventyield': {'type': 'eventyield', 'info': 'Normalized to data events'},
               'normrange': {'type': 'range',
                             'info': 'Normalized for low #Delta_{2D}',
-                            'normvariable': '_RPV',
+                            'normvariable': BRANCH_DELTA2D,
                             'normrange': NORM_DELTA2D},
             },
     },
     'rpvsig': {'variablename': '_RPVSig',
                'xaxtitle': '#Delta_{2D} significance',
                'yaxtitle': 'Reconstructed vertices',
-               'treename': 'laurelin',
-               'extrainfos': ['K^{0}_{S} candidates', 'Run3 / 2024'],
+               'treename': TREE_KS,
+               'extrainfos': ['K^{0}_{S} candidates', ERA_LABEL],
                'bkgmodes': {
                  'bkgsideband': {'type': 'sideband', 'info': 'Background subtracted',
-                                 'sidevariable': '_mass',
-                                 'sidebins': np.linspace(0.44, 0.56, num=31, endpoint=True)}
+                                 'sidevariable': BRANCH_MASS,
+                                 'sidebins': MASS_SIDE_BINS}
                },
                'bins': {
                  'finebins': np.linspace(0, 600, num=61, endpoint=True),
@@ -59,7 +71,7 @@ config = ({
                'normalization': {
                  'normrange': {'type': 'range',
                                'info': 'Normalized for low #Delta_{2D}',
-                               'normvariable': '_RPV',
+                               'normvariable': BRANCH_DELTA2D,
                                'normrange': NORM_DELTA2D},
                },
     }

@@ -18,7 +18,8 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 
 DisplacedV0Ntuple::DisplacedV0Ntuple(const edm::ParameterSet& iConfig)
-    : isData_(iConfig.getParameter<bool>("isData")) {
+    : isData_(iConfig.getParameter<bool>("isData")),
+      useESMagneticField_(iConfig.getParameter<bool>("useESMagneticField")) {
   usesResource("TFileService");
 
   muonToken = consumes<std::vector<pat::Muon>>(iConfig.getParameter<edm::InputTag>("muons"));
@@ -37,6 +38,12 @@ DisplacedV0Ntuple::DisplacedV0Ntuple(const edm::ParameterSet& iConfig)
         consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genEventInfo"));
     pileUpToken =
         consumes<std::vector<PileupSummaryInfo>>(iConfig.getParameter<edm::InputTag>("pileupInfo"));
+  }
+
+  // Optional ES MagField (IdealMagneticFieldRecord). Requires MagneticField_cff in the cfg.
+  // Preferred long-term: TransientTrackBuilder from TransientTrackRecord (see smoke docs).
+  if (useESMagneticField_) {
+    bFieldToken_ = esConsumes<MagneticField, IdealMagneticFieldRecord>();
   }
 
   v0Analyzer_ = std::make_unique<V0Analyzer>(iConfig, this);
@@ -63,7 +70,7 @@ void DisplacedV0Ntuple::beginJob() {
   jetAnalyzer_->beginJob(tree_);
 }
 
-void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup&) {
+void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   run_ = iEvent.id().run();
   luminosityBlock_ = iEvent.luminosityBlock();
   event_ = iEvent.id().event();
@@ -94,7 +101,7 @@ void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup&
   leptonAnalyzer_->analyze(iEvent, pv);
   jetAnalyzer_->analyze(iEvent);
   if (vertices.isValid() && !vertices->empty()) {
-    v0Analyzer_->analyze(iEvent, pv);
+    v0Analyzer_->analyze(iEvent, iSetup, pv);
   } else {
     // Avoid carrying previous-event V0/PV branches into Fill()
     v0Analyzer_->clear();

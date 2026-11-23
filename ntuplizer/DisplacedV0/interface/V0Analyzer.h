@@ -8,6 +8,8 @@
  Adapted for K0sAnalysisRun3 slim package:
    - friend/owner class: DisplacedV0Ntuple (was multilep)
    - include paths: DisplacedV0/... (was heavyNeutrino/multilep/...)
+   - MagField: default OAEParametrizedMagneticField("3_8T"); optional ES
+     IdealMagneticFieldRecord via DisplacedV0Ntuple::useESMagneticField_
  Physics / Kalman logic and ntuple branches match upstream.
  AN-20-111 §6 tight cuts (pT>1, hits≥6, χ²/ndof, DCA<0.2, χ²_vtx<7,
  cosθ_pointing>0.99) remain in offline v0building/v0selections.py — same
@@ -33,6 +35,7 @@
 
 // general include files
 #include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
@@ -46,7 +49,16 @@
 // vertex fitter include files
 #include "RecoVertex/VertexPrimitives/interface/TransientVertex.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
+// Prefer interface/ when present (CMSSW_14_0+); fall back to upstream src/ path.
+#if defined(__has_include)
+#if __has_include("MagneticField/ParametrizedEngine/interface/OAEParametrizedMagneticField.h")
+#include "MagneticField/ParametrizedEngine/interface/OAEParametrizedMagneticField.h"
+#else
 #include "MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h"
+#endif
+#else
+#include "MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h"
+#endif
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
@@ -153,17 +165,17 @@ public:
   V0Analyzer(const edm::ParameterSet& iConfig, DisplacedV0Ntuple* ntuple);
   ~V0Analyzer();
   void beginJob(TTree*);
-  void analyze(const edm::Event&, const reco::Vertex&);
+  void analyze(const edm::Event&, const edm::EventSetup&, const reco::Vertex&);
   /** Clear per-event V0/PV state so Fill() does not reuse the previous event. */
   void clear();
   std::unordered_map<std::string, double> getTrackVariables(
-      const reco::Track&, edm::Handle<reco::BeamSpot>, MagneticField*);
+      const reco::Track&, edm::Handle<reco::BeamSpot>, const MagneticField*);
   double getTrackRelIso(const reco::Track&, const edm::Event&);
   std::unordered_map<std::string, double> VZeroFitter(
       const reco::Track&, const reco::Track&,
       edm::Handle<reco::BeamSpot>,
       const reco::Vertex&,
-      MagneticField*,
+      const MagneticField*,
       const edm::Event&);
 };
 

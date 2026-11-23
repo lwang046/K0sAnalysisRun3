@@ -9,6 +9,8 @@
    - Owner: DisplacedV0Ntuple* (was multilep*)
    - Tokens: ntuple_->packedCandidatesToken / lostTracksToken / beamSpotToken
    - Unused ele/muon getByToken calls from upstream analyze() dropped
+   - MagField: OAE "3_8T" by default; optional ES IdealMagneticFieldRecord
+     when DisplacedV0Ntuple::useESMagneticField_ is true (cfg switch).
    - CMSSW preselection unchanged (loose quality + IP sig>2; DCA/cylinder/
      Kalman χ²/mass windows as upstream). AN-20-111 §6 tight cuts stay offline
      in v0building/v0selections.py (same as K0sAnalysis).
@@ -115,14 +117,31 @@ void V0Analyzer::clear() {
 }
 
 // analyze (main method) //
-void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVertex) {
+void V0Analyzer::analyze(const edm::Event& iEvent,
+                         const edm::EventSetup& iSetup,
+                         const reco::Vertex& primaryVertex) {
   edm::Handle<std::vector<pat::PackedCandidate>> packedCandidates;
   iEvent.getByToken(ntuple_->packedCandidatesToken, packedCandidates);
   edm::Handle<std::vector<pat::PackedCandidate>> lostTracks;
   iEvent.getByToken(ntuple_->lostTracksToken, lostTracks);
   edm::Handle<reco::BeamSpot> beamSpotHandle;
   iEvent.getByToken(ntuple_->beamSpotToken, beamSpotHandle);
-  MagneticField* bfield = new OAEParametrizedMagneticField("3_8T");
+
+  // MagField resolution (Run3 hardening):
+  //   useESMagneticField=True  → IdealMagneticFieldRecord from EventSetup
+  //                              (load MagneticField_cff + Geometry in the cfg;
+  //                               TransientTrackBuilder is the preferred next step
+  //                               if reco::TransientTrack(Track, MagField*) is removed).
+  //   useESMagneticField=False → OAEParametrizedMagneticField("3_8T") as upstream
+  //                              (no MagField ES products required for smoke).
+  std::unique_ptr<MagneticField> ownedBField;
+  const MagneticField* bfield = nullptr;
+  if (ntuple_->useESMagneticField_) {
+    bfield = &iSetup.getData(ntuple_->bFieldToken_);
+  } else {
+    ownedBField = std::make_unique<OAEParametrizedMagneticField>("3_8T");
+    bfield = ownedBField.get();
+  }
 
   // store primary vertex position and position uncertainty
   _primaryVertexX = primaryVertex.position().x();
@@ -231,13 +250,13 @@ void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVe
     }
     if (_nV0s == nV0s_max) break;
   }
-  delete bfield;
+  // ownedBField unique_ptr cleans up OAE; ES MagField is not owned here.
 }
 
 std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
     const reco::Track& tr,
     edm::Handle<reco::BeamSpot> beamSpotHandle,
-    MagneticField* bfield) {
+    const MagneticField* bfield) {
   // get properties of an individual track
   // (and do preliminary selection)
 
@@ -338,7 +357,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(
     const reco::Track& tr2,
     edm::Handle<reco::BeamSpot> beamSpotHandle,
     const reco::Vertex& primaryVertex,
-    MagneticField* bfield,
+    const MagneticField* bfield,
     const edm::Event& iEvent) {
   // FIT AND SELECT V0 VERTICES FROM TWO TRACKS AND CALCULATE PROPERTIES
   std::unordered_map<std::string, double> outputmap = {

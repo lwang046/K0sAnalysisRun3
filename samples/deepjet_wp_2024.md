@@ -1,4 +1,4 @@
-# DeepJet \(b\)-veto (2024 placeholders)
+# DeepJet \(b\)-veto (2024)
 
 AN-20-111 used DeepCSV loose. For Run 3 / 2024 use **DeepJet** (BTV default for
 this analysis; ParticleNet / robustParT are alternatives — freeze one tagger).
@@ -10,16 +10,19 @@ this analysis; ParticleNet / robustParT are alternatives — freeze one tagger).
 | Jet collection | AK4 PUPPI (`slimmedJetsPuppi`) |
 | \(p_T\), \(\lvert\eta\rvert\) | \(>30\,\mathrm{GeV}\), \(<2.5\); jet ID pass |
 | Discriminator (MiniAOD) | `pfDeepFlavourJetTags:probb+probbb+problepb` → branch `Jet_btagDeepFlavB` |
-| Working point | **loose** (L) — light-jet mistag ≈ 10% by BTV definition |
+| Working point | **loose** (L) — light-jet mistag ≈ 10% by BTV definition (DP-2024/025) |
 | Veto | ≥1 jet above loose WP |
+| Offline flag | `v0building/v0builder.py --apply-dy-selection --deepjet-loose-wp <cut>` |
 
-## Numeric WP — TODO-VERIFY (do not invent)
+## Numeric WP
 
-| WP | Mistag definition | Threshold for 2024 DeepJet |
+| WP | Mistag definition | Threshold |
 | --- | --- | --- |
-| Loose (L) | ~10% light-jet mistag | **TODO-VERIFY** — look up (do not copy Run 2 / 2016 Open Data numbers) |
+| Loose (L) | ~10% light-jet mistag | **Best-effort placeholder: `0.0494`** (also wired as `DEEPJET_LOOSE_WP_PLACEHOLDER` in `v0builder.py`) — **TODO-VERIFY** against 2024 `btagging.json` / `deepJet_wp_values` before M5 |
 | Medium (M) | ~1% | TODO-VERIFY (systematic variation only) |
 | Tight (T) | ~0.1% | TODO-VERIFY (not used for AN-style veto) |
+
+`0.0494` is a common Run-3 DeepJet loose cut quoted in analysis codes; it is **not** frozen here. Look up the official 2024 (or Summer24 / Prompt) value on CVMFS — do not copy Run 2 / 2016 Open Data numbers blindly.
 
 Run 3 also defines XT (~0.05%) and XXT (~0.01%); not needed for the DY \(b\)-veto.
 
@@ -35,7 +38,7 @@ Run 3 also defines XT (~0.05%) and XXT (~0.01%); not needed for the DY \(b\)-vet
    equivalent) and fixed-WP SF corrections for flavour `5/4/0`.
 
 2. **BTV / CMS performance notes**  
-   - CMS-DP-2024/025 (2022 AK4 \(b\)-tagging summary; documents L/M/T/XT/XXT mistag defs)  
+   - CMS-DP-2024/025 (2022 AK4 \(b\)-tagging; documents L/M/T/XT/XXT mistag defs)  
    - Later 2024 BTV DPs / POG talks for the **2024** DeepJet thresholds  
    - CMS BTV TWiki (internal): search “DeepJet working points Run 3 / 2024”
 

@@ -30,7 +30,9 @@ import vector
 from v0selections import cospointing, selection
 
 MZ = 91.1876
-DEEPJET_LOOSE_WP_PLACEHOLDER = 0.0494  # TBD: freeze from BTV 2024 JSON
+# Keep in sync with analysis/config_defaults_run3.py DEEPJET_LOOSE_WP.
+# TBD: freeze from BTV 2024 JSON (samples/deepjet_wp_2024.md / conditions.md).
+DEEPJET_LOOSE_WP_PLACEHOLDER = 0.0494
 
 
 def _dimuon_mass(branches):
@@ -100,14 +102,18 @@ def dy_event_mask(branches, deepjet_wp: float | None):
 
 
 def count_jets(branches):
+  # Count selected jets per event. Prefer ak.sum on the boolean mask so we do
+  # not flatten RegularArray / 2D Jet_* branches (ak.num(jpt[mask], axis=1)
+  # fails once boolean indexing collapses the jet axis).
   if "nJet" not in branches.fields:
-    return ak.zeros_like(branches["run"])
+    ref = branches["run"] if "run" in branches.fields else branches["_runNb"]
+    return ak.zeros_like(ref)
   jpt = branches["Jet_pt"]
   jeta = branches["Jet_eta"]
   jet_sel = (jpt > 30.0) & (np.abs(jeta) < 2.5)
   if "Jet_jetId" in branches.fields:
     jet_sel = jet_sel & (branches["Jet_jetId"] >= 2)
-  return ak.num(jpt[jet_sel], axis=1)
+  return ak.values_astype(ak.sum(jet_sel, axis=-1), np.int32)
 
 
 if __name__ == "__main__":

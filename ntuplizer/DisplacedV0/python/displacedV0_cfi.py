@@ -6,6 +6,11 @@ import FWCore.ParameterSet.Config as cms
 displacedV0Ntuple = cms.EDAnalyzer(
     "DisplacedV0Ntuple",
     isData=cms.bool(True),
+    # MagField: False = OAEParametrizedMagneticField("3_8T") in V0Analyzer (smoke-friendly).
+    # True  = IdealMagneticFieldRecord via ESGetToken (load MagneticField_cff + Geometry
+    #         in the cfg; see docs/cmsrun-smoke-test.md). Next step if needed:
+    #         TransientTrackBuilder from TransientTrackRecord.
+    useESMagneticField=cms.bool(False),
     muons=cms.InputTag("slimmedMuons"),
     jets=cms.InputTag("slimmedJetsPuppi"),  # AK4 PUPPI; confirm era default
     packedCandidates=cms.InputTag("packedPFCandidates"),

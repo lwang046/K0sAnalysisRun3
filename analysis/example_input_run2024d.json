@@ -1,0 +1,25 @@
+{
+  "datain": [
+    {
+      "file": "PLACEHOLDER_v0sel_data_Run2024D.root",
+      "label": "Run2024D Muon",
+      "luminosity": 1.0,
+      "xsection": 1.0,
+      "era": "2024D",
+      "year": "2024",
+      "campaign": "run3summer24"
+    }
+  ],
+  "mcin": [
+    {
+      "file": "PLACEHOLDER_v0sel_dy_Summer24.root",
+      "label": "DY Summer24 FxFx",
+      "luminosity": 1.0,
+      "xsection": 1.0,
+      "nevents": 1.0,
+      "era": "2024D",
+      "year": "2024",
+      "campaign": "run3summer24"
+    }
+  ]
+}
