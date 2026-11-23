@@ -1,0 +1,29 @@
+# Analysis — \(C(\Delta_{2D})\)
+
+Fill data/MC V0 yields vs `rpv` / \(\Delta_{2D}\), **sideband-subtract**,
+**normalize at low \(\Delta_{2D}\)**, form \(C\).
+
+Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnalysis)
+`analysis/` @ `2a132385`, adapted for Run3 / DisplacedV0 → v0building trees.
+
+| File | Role |
+| --- | --- |
+| `config_ksvars.py` | 1D \(\Delta_{2D}\) bins (method §2.6) + sideband + `normrange` |
+| `config_ks2dvars.py` | 2D \(C(\Delta_{2D},p_T)\) |
+| `config_controlvars.py` | DY controls (`_nimloth_Mll`, muon \(p_T/\eta\)) |
+| `config_lavars.py` | \(\Lambda\) diagnostic |
+| `mcvsdata_fill.py` | Core fill: sideband → yields → low-\(\Delta_{2D}\) scale |
+| `mcvsdata_submit*.py` | Condor/local batch |
+
+### Branch schema (post-v0building)
+
+| Tree | Key branches |
+| --- | --- |
+| `laurelin` | `_RPV`, `_mass`, `_pt`, `_weight`, `_nTrueInt` |
+| `nimloth` | `_nimloth_Mll`, `_nimloth_nJets`, … |
+| `celeborn` | `_celeborn_lPt`, `_celeborn_lEta`, … |
+
+`_weight` / `_nTrueInt` are mapped from DisplacedV0 `genWeight` / `Pileup_nTrue`.
+
+Default: `--nopileup` until Collisions24 PU profiles are under `reweighting/pileup/`.
+Use `--normmode range` with `fitting/variables/variable_norm_rpv.json` (or config `normrange`) for AN low-\(\Delta_{2D}\) normalization.

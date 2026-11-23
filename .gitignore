@@ -1,0 +1,8 @@
+*.root
+*.pyc
+__pycache__/
+crab_*/
+CMSSW_*/
+*.tar.gz
+.DS_Store
+.tmp/
