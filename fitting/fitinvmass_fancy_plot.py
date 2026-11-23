@@ -123,7 +123,7 @@ if __name__=='__main__':
 	for i in range(binlow,binhigh):
 	    histclone.SetBinContent(i,0)
 	guess = [0.]*(polydegree+1)
-	backfit,paramdict = ft.poly_fit(histclone,fitrange,guess,"Q0")
+	backfit, paramdict, _fitobj = ft.poly_fit(histclone, fitrange, guess, optionstring="Q0")
 	average = backfit.Eval(xcenter)
 	# step 2: do simultaneous fit with previous fit parameters as initial guesses
 	guess = [xcenter,average*10,0.005,average*10,0.01]

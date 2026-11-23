@@ -423,7 +423,7 @@ if __name__=='__main__':
       simdict['counts'] = simdict['counts']*scale
       simdict['staterrors'] = simdict['staterrors']*scale
       if simdict['variations'] is not None:
-          for key,val in simdict['variations']:
+          for key,val in simdict['variations'].items():
               simdict['variations'][key] = val*scale
 
   # for normmode 'range', normalize sum of simulation to sum of data,
@@ -431,7 +431,7 @@ if __name__=='__main__':
   if args.normmode=='range':
     print('Normalizing simulation yield to data yield in range...')
     # calculate the sum of data counts in normalization range
-    # (background subtracted)
+    # (background subtracted when sideband variations exist)
     datasum = 0
     datafitsyst2 = 0
     for datadict in datain:
@@ -446,9 +446,10 @@ if __name__=='__main__':
         msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
         raise Exception(msg)
       datasum += counts[0]
-      datafitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
+      if variations is not None and 'bkgfit_up' in variations:
+        datafitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
     # calculate the sum of simulation counts in normalization range
-    # (background subtracted)
+    # (background subtracted when sideband variations exist)
     simsum = 0
     simfitsyst2 = 0
     for simdict in simin:
@@ -466,24 +467,28 @@ if __name__=='__main__':
         msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
         raise Exception(msg)
       simsum += counts[0]
-      simfitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
+      if variations is not None and 'bkgfit_up' in variations:
+        simfitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
     # make the ratio to calculate the normalization factor
     # (and propagate corresponding uncertainty)
     scale = datasum / simsum
     scalerelerr = np.sqrt(datafitsyst2/(datasum**2) + simfitsyst2/(simsum**2))
-    # simple rescaling for nominal values
+    # simple rescaling for nominal values + per-sample norm uncertainty
     for simdict in simin:
       simdict['counts'] = simdict['counts']*scale
       simdict['staterrors'] = simdict['staterrors']*scale
+      if simdict['variations'] is None:
+        continue
       for key,val in simdict['variations'].items():
           simdict['variations'][key] = val*scale
-    # adding the normalization uncertainty in quadrature
-    # as systematic uncertainty to all bins
-    normunc = simdict['counts'] * scalerelerr
-    fitunc = simdict['variations']['bkgfit_up'] - simdict['counts']
-    fitunc = np.sqrt( np.power(fitunc,2) + np.power(normunc,2) )
-    simdict['variations']['bkgfit_up'] = simdict['counts'] + fitunc
-    simdict['variations']['bkgfit_down'] = simdict['counts'] - fitunc
+      # adding the normalization uncertainty in quadrature
+      # as systematic uncertainty to all bins (every sim sample)
+      if 'bkgfit_up' in simdict['variations']:
+        normunc = simdict['counts'] * scalerelerr
+        fitunc = simdict['variations']['bkgfit_up'] - simdict['counts']
+        fitunc = np.sqrt( np.power(fitunc,2) + np.power(normunc,2) )
+        simdict['variations']['bkgfit_up'] = simdict['counts'] + fitunc
+        simdict['variations']['bkgfit_down'] = simdict['counts'] - fitunc
 
   # for normmode 'eventyield', scale using event weights
   if args.normmode=='eventyield':
@@ -512,7 +517,7 @@ if __name__=='__main__':
       simdict['counts'] = simdict['counts']*scale
       simdict['staterrors'] = simdict['staterrors']*scale
       if simdict['variations'] is not None:
-          for key,val in simdict['variations']:
+          for key,val in simdict['variations'].items():
               simdict['variations'][key] = val*scale
 
   # write histograms and meta-info to file

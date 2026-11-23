@@ -185,7 +185,7 @@ if __name__=='__main__':
         histclone.SetBinContent(binnb,0)
         histclone.SetBinError(binnb,0)
     guess = [0.]*(args.polydegree+1)
-    bkgfit, paramdict, fitobj1 = ft.poly_fit(histclone,fitrange,guess,"Q0")
+    bkgfit, paramdict, fitobj1 = ft.poly_fit(histclone, fitrange, guess, optionstring="Q0")
     average = bkgfit.Eval(xcenter)
     
     # do simultaneous fit with previous fit parameters as initial guesses

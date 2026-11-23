@@ -9,7 +9,7 @@ track \(\chi^2/\mathrm{ndof}<5\), DCA < 0.2, vtx \(\chi^2<7\),
 Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnalysis)
 `v0building/` @ `2a132385`, **adapted for DisplacedV0 Run3 ntuples**.
 
-### Input (DisplacedV0 `events` tree)
+### Input (DisplacedV0 `displacedV0Ntuple/events` tree)
 
 | Branch | Use |
 | --- | --- |

@@ -101,6 +101,19 @@ void V0Analyzer::beginJob(TTree* outputTree) {
   outputTree->Branch("_V0IsoNeg", &_V0IsoNeg, "_V0IsoNeg[_nV0s]/D");
 }
 
+void V0Analyzer::clear() {
+  _nV0s = 0;
+  _primaryVertexX = 0.;
+  _primaryVertexY = 0.;
+  _primaryVertexZ = 0.;
+  _primaryVertexXUnc = 0.;
+  _primaryVertexYUnc = 0.;
+  _primaryVertexZUnc = 0.;
+  _beamSpotX = 0.;
+  _beamSpotY = 0.;
+  _beamSpotZ = 0.;
+}
+
 // analyze (main method) //
 void V0Analyzer::analyze(const edm::Event& iEvent, const reco::Vertex& primaryVertex) {
   edm::Handle<std::vector<pat::PackedCandidate>> packedCandidates;

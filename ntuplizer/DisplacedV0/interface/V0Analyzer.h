@@ -154,6 +154,8 @@ public:
   ~V0Analyzer();
   void beginJob(TTree*);
   void analyze(const edm::Event&, const reco::Vertex&);
+  /** Clear per-event V0/PV state so Fill() does not reuse the previous event. */
+  void clear();
   std::unordered_map<std::string, double> getTrackVariables(
       const reco::Track&, edm::Handle<reco::BeamSpot>, MagneticField*);
   double getTrackRelIso(const reco::Track&, const edm::Event&);

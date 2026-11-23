@@ -95,6 +95,9 @@ void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup&
   jetAnalyzer_->analyze(iEvent);
   if (vertices.isValid() && !vertices->empty()) {
     v0Analyzer_->analyze(iEvent, pv);
+  } else {
+    // Avoid carrying previous-event V0/PV branches into Fill()
+    v0Analyzer_->clear();
   }
 
   tree_->Fill();

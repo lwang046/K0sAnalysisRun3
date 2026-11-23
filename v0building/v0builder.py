@@ -5,7 +5,7 @@
 # (commit 2a132385aec7e15d1bbdfb038edf0534bb4855b8) and adapted
 # for the slim DisplacedV0 ntuple branch names.
 #
-# Input tree:  events  (DisplacedV0Ntuple)
+# Input tree:  displacedV0Ntuple/events  (DisplacedV0Ntuple / TFileService)
 # Output trees (unchanged AN analysis schema):
 #   nimloth   — per-event DY controls
 #   celeborn  — per-muon kinematics
@@ -55,7 +55,7 @@ def dy_event_mask(branches, deepjet_wp: float | None):
   """AN §5 DY reference selection on DisplacedV0 branches."""
   n = len(branches)
   mask = np.ones(n, dtype=bool)
-  mll = ak.zeros(n)
+  mll = np.zeros(n)
 
   if "passDimuonHLT" in branches.fields:
     mask = mask & ak.to_numpy(branches["passDimuonHLT"])
@@ -121,8 +121,8 @@ if __name__ == "__main__":
   parser.add_argument("--transfer", default=False, action="store_true")
   parser.add_argument(
     "--treename",
-    default="events",
-    help="DisplacedV0 tree name (default: events)",
+    default="displacedV0Ntuple/events",
+    help="DisplacedV0 tree path (TFileService: displacedV0Ntuple/events)",
   )
   parser.add_argument(
     "--apply-dy-selection",
@@ -161,16 +161,22 @@ if __name__ == "__main__":
   with uproot.open(args.inputfile) as f:
     fkeys = [key.split(";")[0] for key in f.keys()]
 
-    # DisplacedV0: flat 'events' tree. Fall back to upstream heavyNeutrino layout.
-    if args.treename in fkeys:
-      tree = f[args.treename]
-      layout = "displacedv0"
-    elif "blackJackAndHookers" in fkeys:
+    # DisplacedV0: TFileService nests the tree under the module label.
+    # Fall back to a bare 'events' tree, then upstream heavyNeutrino layout.
+    tree = None
+    layout = None
+    for candidate in (args.treename, "displacedV0Ntuple/events", "events"):
+      if candidate in fkeys:
+        tree = f[candidate]
+        layout = "displacedv0"
+        break
+    if tree is None and "blackJackAndHookers" in fkeys:
       tree = f["blackJackAndHookers"]["blackJackAndHookersTree"]
       layout = "upstream"
-    else:
+    if tree is None:
       raise KeyError(
-        "Neither DisplacedV0 tree {!r} nor upstream blackJackAndHookers found. Keys: {}".format(
+        "Neither DisplacedV0 tree {!r} (or displacedV0Ntuple/events / events) "
+        "nor upstream blackJackAndHookers found. Keys: {}".format(
           args.treename, fkeys
         )
       )
