@@ -29,6 +29,7 @@ Canonical docs:
 | Target GitHub | `https://github.com/lwang046/K0sAnalysisRun3` |
 | Base / parent PR | **#1** open — `cursor/push-context-package-0cb7` |
 | This work branch | `cursor/first-c-delta2d-prep-241d` (stacked on #1) |
+| This PR | **https://github.com/lwang046/K0sAnalysisRun3/pull/2** |
 | HepTools | Untouched |
 
 ---
@@ -43,7 +44,7 @@ Canonical docs:
 | **M3** DisplacedV0 | Analyzers + MagField hardening | `useESMagneticField` cfg/ES token; OAE default; smoke docs updated; **no cmsRun on VM** |
 | Offline fitting / analysis / v0building | Ported + dry-run | `count_jets` fix; dummy ntuple script; `config_defaults_run3.py` |
 | First \(C(\Delta_{2D})\) recipe | **Done (doc)** | `docs/first-c-delta2d-recipe.md` — scram → CRAB → v0building → fit → fill |
-| GitHub PR | #1 open; this stack PR | See PR URL after open |
+| GitHub PR | #1 open; **#2 stacked** | https://github.com/lwang046/K0sAnalysisRun3/pull/2 |
 
 ---
 
