@@ -1,0 +1,28 @@
+# HLT paths for DY dimuon reference (logical OR of paths that exist in the era menu)
+# Unbiased w.r.t. hadronic V0s — never include displaced-dimuon / LLP parking / scouting.
+# Confirm presence per era in the 2024 GRun / Muon PD menu before freezing.
+# Wired into ntuplizer via displacedV0_cfi.py → hltPaths.
+
+# ---------------------------------------------------------------------------
+# Baseline (method §2.3 / plan §3.3) — expected in Run 3 double-muon menu
+# ---------------------------------------------------------------------------
+HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+
+# ---------------------------------------------------------------------------
+# Companion — include in OR only if present for the frozen era (TODO-VERIFY)
+# ---------------------------------------------------------------------------
+# TODO-VERIFY per era:
+# HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8
+
+# ---------------------------------------------------------------------------
+# Explicitly EXCLUDE (bias the V0 / displaced-track calibration sample)
+# ---------------------------------------------------------------------------
+# HLT_*Displaced*Mu*
+# HLT_*Parking*
+# HLT_*Scouting*
+# any dedicated LLP dimuon paths
+
+# How to confirm on lxplus (example):
+#   edmDumpEventContent / store/.../MINIAOD/...root | grep -i HLT
+#   or inspect TriggerResults menu for the run via ConfDB / HLT configuration
+# Record confirmed OR list + era in conditions.md when freezing M2/M4.

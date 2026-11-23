@@ -1,0 +1,24 @@
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/ServiceRegistry"/>
+<use name="CommonTools/UtilAlgos"/>
+<use name="DataFormats/PatCandidates"/>
+<use name="DataFormats/VertexReco"/>
+<use name="DataFormats/TrackReco"/>
+<use name="DataFormats/MuonReco"/>
+<use name="DataFormats/Common"/>
+<use name="SimDataFormats/GeneratorProducts"/>
+<use name="SimDataFormats/PileupSummaryInfo"/>
+<use name="MagneticField/Engine"/>
+<use name="MagneticField/ParametrizedEngine"/>
+<use name="TrackingTools/TransientTrack"/>
+<use name="TrackingTools/Records"/>
+<use name="TrackingTools/PatternTools"/>
+<use name="TrackingTools/TrajectoryState"/>
+<use name="RecoVertex/VertexPrimitives"/>
+<use name="RecoVertex/KalmanVertexFit"/>
+<use name="RecoVertex/VertexTools"/>
+<use name="root"/>
+<export>
+  <lib name="1"/>
+</export>

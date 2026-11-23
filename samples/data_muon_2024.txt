@@ -1,0 +1,54 @@
+# 2024 Muon MiniAOD — concrete DAS stubs for M2 / first CRAB era
+# Status: illustrative full names following published Run2024 patterns.
+# Lines marked TODO-VERIFY must be confirmed with dasgoclient before CRAB.
+# Prefer MiniAOD (not NanoAOD) so packedPFCandidates + lostTracks remain available.
+#
+# Run 3 primary datasets: Muon0 / Muon1 (split Muon PD). DoubleMuon is legacy —
+# only use if still published for the era (unlikely for 2024 physics PDs).
+#
+# Suggested first era for PromptReco smoke: Run2024F or Run2024G
+# (mid-year, typically well certified — pick after golden JSON + lumi check).
+#
+# Discover / refresh:
+#   scripts/das_discover.sh
+#   dasgoclient -query='dataset=/Muon*/Run2024*/MINIAOD' | sort
+
+# ---------------------------------------------------------------------------
+# PromptReco MiniAOD — TODO-VERIFY each line on DAS (v-number may differ)
+# Pattern confirmed in the wild: /Muon{0,1}/Run2024*-PromptReco-v*/MINIAOD
+# ---------------------------------------------------------------------------
+# TODO-VERIFY:
+/Muon0/Run2024C-PromptReco-v1/MINIAOD
+/Muon1/Run2024C-PromptReco-v1/MINIAOD
+/Muon0/Run2024D-PromptReco-v1/MINIAOD
+/Muon1/Run2024D-PromptReco-v1/MINIAOD
+/Muon0/Run2024E-PromptReco-v1/MINIAOD
+/Muon1/Run2024E-PromptReco-v1/MINIAOD
+# Preferred first-era candidates (plan §8 / §3):
+/Muon0/Run2024F-PromptReco-v1/MINIAOD
+/Muon1/Run2024F-PromptReco-v1/MINIAOD
+/Muon0/Run2024G-PromptReco-v1/MINIAOD
+/Muon1/Run2024G-PromptReco-v1/MINIAOD
+/Muon0/Run2024H-PromptReco-v1/MINIAOD
+/Muon1/Run2024H-PromptReco-v1/MINIAOD
+/Muon0/Run2024I-PromptReco-v1/MINIAOD
+/Muon1/Run2024I-PromptReco-v1/MINIAOD
+
+# ---------------------------------------------------------------------------
+# Central re-MiniAOD (if/when published) — TODO-VERIFY campaign token
+# Pattern: /Muon*/Run2024*-*MiniAOD*/MINIAOD  (e.g. MiniAODv4 / MiniAODv6)
+# Prefer rereco over PromptReco for final C(Δ2D); PromptReco OK for first C.
+# ---------------------------------------------------------------------------
+# TODO-VERIFY (example shape only — processed-dataset string will differ):
+# /Muon0/Run2024F-MiniAODv4_*-140X_dataRun3_*-v*/MINIAOD
+# /Muon1/Run2024F-MiniAODv4_*-140X_dataRun3_*-v*/MINIAOD
+
+# ---------------------------------------------------------------------------
+# DoubleMuon PD — expected absent / empty for 2024; keep query for completeness
+# ---------------------------------------------------------------------------
+# TODO-VERIFY (likely empty):
+# /DoubleMuon/Run2024*-PromptReco-v*/MINIAOD
+# /DoubleMuon0/Run2024*-PromptReco-v*/MINIAOD
+
+# Freeze one era + both Muon0 and Muon1 into crab_data_2024.py after DAS site check.
+# Lumi mask: samples/cert/ → Cert_Collisions2024_*_Golden.json
