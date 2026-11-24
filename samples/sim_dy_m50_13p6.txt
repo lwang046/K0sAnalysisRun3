@@ -50,3 +50,6 @@
 #
 # Match CMSSW to 140X_ / 150X_ token in the chosen processed dataset
 # (plan §2.1): MiniAODv6 + 150X_ → CMSSW_15_0_X; 140X_ → CMSSW_14_0_X.
+#
+# CRAB: crab_mc_dy.py (full) / crab_mc_dy_smoke.py (few files); builders in crab_common.py.
+#       export CRAB_STORAGE_SITE=<your T2> on lxplus (T2_XX_PLACEHOLDER otherwise).

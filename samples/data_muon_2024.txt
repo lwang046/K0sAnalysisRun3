@@ -62,5 +62,7 @@
 # TODO-VERIFY (likely empty):
 # /DoubleMuon/Run2024*-PromptReco-v*/MINIAOD
 
-# CRAB: crab_data_2024.py points at Run2024D Muon0; also submit Muon1.
+# CRAB: crab_data_2024.py (Muon0) + crab_data_2024_muon1.py (Muon1 twin);
+#       smoke: crab_data_2024_smoke.py. Shared builders: crab_common.py.
+#       Set export CRAB_STORAGE_SITE=<your T2> on lxplus (T2_XX_PLACEHOLDER otherwise).
 # Lumi mask: samples/cert/ → Cert_Collisions2024_378981_386951_Golden.json

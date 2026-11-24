@@ -44,19 +44,18 @@ Canonical docs:
 | **M3** DisplacedV0 | Analyzers + MagField hardening | `useESMagneticField` cfg/ES token; OAE default; smoke docs updated; **no cmsRun on VM** |
 | Offline fitting / analysis / v0building | Ported + dry-run | `count_jets` fix; dummy ntuple script; `config_defaults_run3.py` |
 | First \(C(\Delta_{2D})\) recipe | **Done (doc)** | `docs/first-c-delta2d-recipe.md` — scram → CRAB → v0building → fit → fill |
-| GitHub PR | #1 open; **#2 stacked** | https://github.com/lwang046/K0sAnalysisRun3/pull/2 |
+| **M4** CRAB configs | **Prep tightened** | Production psets + Muon0/1 + smoke knobs; `storageSite` PLACEHOLDER / `CRAB_STORAGE_SITE`; DAS/lumiMask still **TODO-VERIFY**; **no crab submit** — [PR #4](https://github.com/lwang046/K0sAnalysisRun3/pull/4) |
 
 ---
 
-## This turn (first \(C(\Delta_{2D})\) prep)
+## This turn (CRAB submit prep)
 
 | Change | Detail |
 | --- | --- |
-| M2 freeze | First era **Run2024D**; updated `samples/*.txt`, `cert/README.md`, `deepjet_wp_2024.md`, `conditions.md`, CRAB stubs, `das_discover.sh` |
-| MagField | OAE default + `useESMagneticField` → `IdealMagneticFieldRecord`; `__has_include` for OAE header; smoke cfgs VarParsing |
-| Recipe | `docs/first-c-delta2d-recipe.md` with ordered commands + DisplacedV0 defaults table |
-| Analysis wiring | `analysis/config_defaults_run3.py`; `config_ksvars*.py` imports; `example_input_run2024d.json` |
-| Dry-run | `scripts/make_dummy_displacedv0_ntuple.py`; `v0builder` `count_jets` boolean-sum fix; verified laurelin `_RPV`/`_mass`/`_weight` |
+| Production psets | `displacedV0_{data,mc}_cfg.py` wrap same sequence as one-file smoke placeholders |
+| CRAB builders | `test/crab_common.py`; Muon0 / Muon1 twin / DY + smoke variants |
+| Naming | `DisplacedV0_Muon{0,1}_Run2024D` / `DisplacedV0_DY_Summer24` request + output files |
+| Docs | Recipe §3, `test/README.md`, smoke-test related paths |
 
 ---
 

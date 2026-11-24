@@ -59,9 +59,9 @@ $CMSSW_BASE/src/DisplacedV0/
 ├── BuildFile.xml
 ├── interface/
 ├── plugins/          # EDM plugin DisplacedV0Ntuple
-├── python/           # displacedV0_cfi.py, test_*_cfg.py
+├── python/           # displacedV0_cfi.py, test_*_cfg.py, displacedV0_{data,mc}_cfg.py
 ├── src/              # V0 / Trigger / Lepton / Jet analyzers
-└── test/             # CRAB stubs + this package’s test README
+└── test/             # CRAB configs (crab_common + data/MC/smoke) + README
 ```
 
 Do **not** leave the package under `ntuplizer/DisplacedV0/` inside `src/` — SCRAM would then expect a `ntuplizer` package name and imports would break.
@@ -197,7 +197,8 @@ PY
 - [ ] `_V0Type==1` mass near 0.498 visible
 - [ ] Exact release + resolved GT recorded in `conditions.md`
 
-When all boxes pass, M3 local smoke is done; next is CRAB stubs under `DisplacedV0/test/`.
+When all boxes pass, M3 local smoke is done; next is CRAB under `DisplacedV0/test/`
+(see `docs/first-c-delta2d-recipe.md` §3 and `DisplacedV0/test/README.md`).
 
 ---
 
@@ -205,9 +206,12 @@ When all boxes pass, M3 local smoke is done; next is CRAB stubs under `Displaced
 
 | Path | Role |
 | --- | --- |
-| `/cursor/stores/self/code/K0sAnalysisRun3/ntuplizer/DisplacedV0/` | CMSSW package source |
-| `.../python/test_data_onefile_cfg.py` | Data smoke cfg |
-| `.../python/test_mc_onefile_cfg.py` | MC smoke cfg |
-| `.../test/README.md` | Short test pointer (this doc linked) |
-| `/cursor/stores/self/code/K0sAnalysisRun3/conditions.md` | GT / release snapshot |
-| `/cursor/stores/self/docs/k0s-run3-scaffold-status.md` | Scaffold status |
+| `ntuplizer/DisplacedV0/` | CMSSW package source |
+| `.../python/test_data_onefile_cfg.py` | Local data smoke cfg (placeholder) |
+| `.../python/test_mc_onefile_cfg.py` | Local MC smoke cfg (placeholder) |
+| `.../python/displacedV0_data_cfg.py` | Production data pset for CRAB |
+| `.../python/displacedV0_mc_cfg.py` | Production MC pset for CRAB |
+| `.../test/README.md` | CRAB submit table + storageSite instructions |
+| `conditions.md` | GT / release snapshot |
+| `docs/k0s-run3-scaffold-status.md` | Scaffold status |
+| `docs/first-c-delta2d-recipe.md` | First-C ordered recipe (§3 = CRAB) |
