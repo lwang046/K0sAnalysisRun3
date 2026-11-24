@@ -50,6 +50,16 @@ if __name__=='__main__':
     choices=[None, 'lumi', 'yield', 'range', 'eventyield'])
   parser.add_argument('--normvariable', default=None, type=os.path.abspath)
   parser.add_argument('--eventtreename', default=None)
+  # Reference-interval stability (method §2.7 / CDTE-25): alternate upper edges
+  # for the low-Δ2D norm range. Primary range still comes from --normvariable.
+  # Example: --norm-stability-uppers 1.0,3.0 with primary [0,2] → write alt scales.
+  parser.add_argument('--norm-stability-uppers', default=None,
+    help='Comma-separated alternate norm-range upper edges (same units as '
+         'normvariable) for reference-interval stability; writes norm_scale_alt_*')
+  # Peak mass-window knob forwarded to count_peak (default: 1/4 of sideband hist range)
+  parser.add_argument('--peak-halfwidth-frac', type=float, default=0.25,
+    help='Peak half-width as fraction of sideband histogram x-range '
+         '(yield, stat error, and sideband masking share this window)')
   # arguments for secondary binning
   parser.add_argument('--yvariable', default=None, type=os.path.abspath)
   parser.add_argument('--weightvar', default='_weight',
@@ -333,7 +343,8 @@ if __name__=='__main__':
               lumi=lumi,
               extrainfo=extrainfo,
               histname=histname,
-              plotdir=args.sideplotdir)
+              plotdir=args.sideplotdir,
+              peak_halfwidth_frac=args.peak_halfwidth_frac)
             counts[i,j] = npeak
             staterrors[i,j] = staterror
             variations['bkgfit_up'][i,j] = npeak + systerror
@@ -343,10 +354,12 @@ if __name__=='__main__':
                 for key,val in updownweights.items():
                     (uppeak, _, _) = count_peak_unbinned(
                       thissidebandvalues, val[0][mask],
-                      sidevariable, mode='hybrid')
+                      sidevariable, mode='hybrid',
+                      peak_halfwidth_frac=args.peak_halfwidth_frac)
                     (downpeak, _, _) = count_peak_unbinned(
                       thissidebandvalues, val[1][mask],
-                      sidevariable, mode='hybrid')
+                      sidevariable, mode='hybrid',
+                      peak_halfwidth_frac=args.peak_halfwidth_frac)
                     variations[key+'_up'][i,j] = uppeak
                     variations[key+'_down'][i,j] = downpeak
 
@@ -426,69 +439,96 @@ if __name__=='__main__':
           for key,val in simdict['variations'].items():
               simdict['variations'][key] = val*scale
 
-  # for normmode 'range', normalize sum of simulation to sum of data,
-  # but the sum is calculated only for a given variable in given range
-  if args.normmode=='range':
-    print('Normalizing simulation yield to data yield in range...')
-    # calculate the sum of data counts in normalization range
-    # (background subtracted when sideband variations exist)
-    datasum = 0
-    datafitsyst2 = 0
+  # Shared low-Δ2D normalization state (written to output ROOT below).
+  # norm_scale = [k, σ_k/k]; alt scales from --norm-stability-uppers.
+  shared_norm_scale = None
+  shared_norm_relerr = None
+  shared_norm_alts = {}  # upper_edge -> scale
+
+  def _norm_yield_in_range(norm_bins):
+    """Sideband-subtracted data/MC yields in a single norm bin [lo, hi]."""
+    nv = dict(normvariable)
+    nv['bins'] = [float(norm_bins[0]), float(norm_bins[1])]
+    datasum = 0.
+    datafitsyst2 = 0.
     for datadict in datain:
       counts, staterror, variations = get_histogram(
         datadict['file'], args.treename,
-        variable=normvariable,
+        variable=nv,
         isdata=True,
         label=datadict['label'].strip(' .')+'_normrange',
         sidevariable=sidevariable,
         nentries=args.nprocess)
-      if len(counts)!=1:
-        msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
-        raise Exception(msg)
+      if len(counts) != 1:
+        raise Exception('ERROR: counts has unexpected length, check normvariable binning.')
       datasum += counts[0]
       if variations is not None and 'bkgfit_up' in variations:
         datafitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
-    # calculate the sum of simulation counts in normalization range
-    # (background subtracted when sideband variations exist)
-    simsum = 0
-    simfitsyst2 = 0
+    simsum = 0.
+    simfitsyst2 = 0.
     for simdict in simin:
-      xsection = simdict['xsection']
-      lumi = simdict['luminosity']
       counts, staterror, variations = get_histogram(
         simdict['file'], args.treename,
-        variable=normvariable,
-        isdata=False, xsection=xsection, lumi=lumi,
+        variable=nv,
+        isdata=False,
+        xsection=simdict['xsection'], lumi=simdict['luminosity'],
         label=simdict['label'].strip(' .')+'_normrange',
         sidevariable=sidevariable,
         nentries=args.nprocess,
         year=simdict['year'], campaign=simdict['campaign'])
-      if len(counts)!=1:
-        msg = 'ERROR: counts has unexpected length, check the binning of normvariable.'
-        raise Exception(msg)
+      if len(counts) != 1:
+        raise Exception('ERROR: counts has unexpected length, check normvariable binning.')
       simsum += counts[0]
       if variations is not None and 'bkgfit_up' in variations:
         simfitsyst2 += (variations['bkgfit_up'][0] - counts[0])**2
-    # make the ratio to calculate the normalization factor
-    # (and propagate corresponding uncertainty)
+    if simsum == 0:
+      raise Exception('ERROR: simulation norm-range yield is zero; cannot form scale.')
     scale = datasum / simsum
-    scalerelerr = np.sqrt(datafitsyst2/(datasum**2) + simfitsyst2/(simsum**2))
-    # simple rescaling for nominal values + per-sample norm uncertainty
+    # Relative uncertainty on k from sideband-fit syst in the shared norm region.
+    # (Statistical component of norm yields is absorbed in per-bin stats after scaling.)
+    rel2 = 0.
+    if datasum != 0:
+      rel2 += datafitsyst2 / (datasum ** 2)
+    rel2 += simfitsyst2 / (simsum ** 2)
+    return scale, np.sqrt(rel2), datasum, simsum
+
+  # for normmode 'range', normalize sum of simulation to sum of data,
+  # but the sum is calculated only for a given variable in given range
+  if args.normmode=='range':
+    print('Normalizing simulation yield to data yield in range...')
+    scale, scalerelerr, datasum, simsum = _norm_yield_in_range(normvariable['bins'])
+    shared_norm_scale = scale
+    shared_norm_relerr = scalerelerr
+    print('  Shared norm scale k = {:.6g}  (rel. fit-syst err = {:.3g})'.format(
+      scale, scalerelerr))
+    print('  Norm yields: data={:.6g}  MC={:.6g}'.format(datasum, simsum))
+
+    # Reference-interval stability: recompute k with alternate upper edges
+    if args.norm_stability_uppers:
+      lo = float(normvariable['bins'][0])
+      for tok in args.norm_stability_uppers.split(','):
+        tok = tok.strip()
+        if not tok:
+          continue
+        hi = float(tok)
+        alt_scale, alt_rel, _, _ = _norm_yield_in_range([lo, hi])
+        shared_norm_alts[hi] = (alt_scale, alt_rel)
+        print('  Norm stability upper={:.4g}: k={:.6g} (relerr={:.3g})'.format(
+          hi, alt_scale, alt_rel))
+
+    # Apply shared scale; keep bkgfit as fit-only; add separate norm_shared_* 
+    # variations that are 100% correlated across bins (method §2.5 / CDTE-25).
     for simdict in simin:
-      simdict['counts'] = simdict['counts']*scale
-      simdict['staterrors'] = simdict['staterrors']*scale
+      simdict['counts'] = simdict['counts'] * scale
+      simdict['staterrors'] = simdict['staterrors'] * scale
       if simdict['variations'] is None:
-        continue
-      for key,val in simdict['variations'].items():
-          simdict['variations'][key] = val*scale
-      # adding the normalization uncertainty in quadrature
-      # as systematic uncertainty to all bins (every sim sample)
-      if 'bkgfit_up' in simdict['variations']:
-        normunc = simdict['counts'] * scalerelerr
-        fitunc = simdict['variations']['bkgfit_up'] - simdict['counts']
-        fitunc = np.sqrt( np.power(fitunc,2) + np.power(normunc,2) )
-        simdict['variations']['bkgfit_up'] = simdict['counts'] + fitunc
-        simdict['variations']['bkgfit_down'] = simdict['counts'] - fitunc
+        simdict['variations'] = {}
+      for key, val in list(simdict['variations'].items()):
+        simdict['variations'][key] = val * scale
+      # Dedicated shared-normalization envelope (correlated across all Δ2D bins).
+      normunc = simdict['counts'] * scalerelerr
+      simdict['variations']['norm_shared_up'] = simdict['counts'] + normunc
+      simdict['variations']['norm_shared_down'] = simdict['counts'] - normunc
 
   # for normmode 'eventyield', scale using event weights
   if args.normmode=='eventyield':
@@ -578,7 +618,7 @@ if __name__=='__main__':
   # write normalization
   normalization_st = ROOT.TNamed('normalization', str(args.normmode))
   normalization_st.Write()
-  # write norm range
+  # write norm range + shared scale (CDTE-25)
   if args.normmode in ['range']:
     normrange_st = ROOT.TVectorD(2)
     normrange_st[0] = normvariable['bins'][0]
@@ -586,6 +626,22 @@ if __name__=='__main__':
     normrange_st.Write("normrange")
     normvariable_st = ROOT.TNamed('normvariable', normvariable['name'])
     normvariable_st.Write()
+    if shared_norm_scale is not None:
+      # [k, σ_k/k] — use for correlated propagation of the shared low-Δ2D scale
+      norm_scale_st = ROOT.TVectorD(2)
+      norm_scale_st[0] = float(shared_norm_scale)
+      norm_scale_st[1] = float(shared_norm_relerr if shared_norm_relerr is not None else 0.)
+      norm_scale_st.Write("norm_scale")
+    for hi, (alt_k, alt_rel) in sorted(shared_norm_alts.items()):
+      tag = ('%.4g' % hi).replace('.', 'p').replace('-', 'm')
+      alt_st = ROOT.TVectorD(2)
+      alt_st[0] = float(alt_k)
+      alt_st[1] = float(alt_rel)
+      alt_st.Write('norm_scale_alt_upper_{}'.format(tag))
+  # peak window knob used for sideband yields
+  peakfrac_st = ROOT.TVectorD(1)
+  peakfrac_st[0] = float(args.peak_halfwidth_frac)
+  peakfrac_st.Write('peak_halfwidth_frac')
   # write luminosity
   lumi_st = ROOT.TVectorD(1)
   lumi_st[0] = totallumi

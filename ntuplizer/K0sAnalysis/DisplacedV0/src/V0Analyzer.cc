@@ -96,6 +96,9 @@ void V0Analyzer::beginJob(TTree* outputTree) {
   outputTree->Branch("_V0NHitsNeg", &_V0NHitsNeg, "_V0NHitsNeg[_nV0s]/D");
   outputTree->Branch("_V0NormChi2Pos", &_V0NormChi2Pos, "_V0NormChi2Pos[_nV0s]/D");
   outputTree->Branch("_V0NormChi2Neg", &_V0NormChi2Neg, "_V0NormChi2Neg[_nV0s]/D");
+  // Daughter IPs (dxy/dz w.r.t. PV) — keep for trackingEff nuisances (CDTE-26).
+  // Nearest charged-track-in-jet distance is NOT filled here (no jet matching);
+  // offline v0building reserves NaN schema hooks _trkNearestJetDist{Pos,Neg}.
   outputTree->Branch("_V0D0Pos", &_V0D0Pos, "_V0D0Pos[_nV0s]/D");
   outputTree->Branch("_V0DzPos", &_V0DzPos, "_V0DzPos[_nV0s]/D");
   outputTree->Branch("_V0D0Neg", &_V0D0Neg, "_V0D0Neg[_nV0s]/D");

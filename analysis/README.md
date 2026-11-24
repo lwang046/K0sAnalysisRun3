@@ -23,11 +23,16 @@ Ordered first-era commands: [`docs/first-c-delta2d-recipe.md`](../docs/first-c-d
 
 | Tree | Key branches |
 | --- | --- |
-| `laurelin` | `_RPV`, `_mass`, `_pt`, `_weight`, `_nTrueInt` |
+| `laurelin` | `_RPV`, `_mass`, `_pt`, `_weight`, `_nTrueInt`, `_d0Pos/Neg`, `_dzPos/Neg`, `_trackdR` |
 | `nimloth` | `_nimloth_Mll`, `_nimloth_nJets`, … |
 | `celeborn` | `_celeborn_lPt`, `_celeborn_lEta`, … |
 
 `_weight` / `_nTrueInt` are mapped from DisplacedV0 `genWeight` / `Pileup_nTrue`.
+Daughter IPs (`_d0*`/`_dz*`) come from DisplacedV0 `_V0D0*`/`_V0Dz*` (CDTE-26).
+`_trkNearestJetDistPos/Neg` are NaN schema hooks until jet↔V0 matching exists.
 
 Default: `--nopileup` until Collisions24 PU profiles are under `reweighting/pileup/`.
 Use `--normmode range` with `fitting/variables/variable_norm_rpv.json` (or config `normrange`) for AN low-\(\Delta_{2D}\) normalization.
+Shared scale + correlated envelope: output `norm_scale`, `norm_shared_up/down`.
+Stability knob: `--norm-stability-uppers 1.0,3.0`. Peak window: `--peak-halfwidth-frac 0.25`.
+

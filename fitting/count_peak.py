@@ -4,6 +4,10 @@
 # Ported from LukaLambrecht/K0sAnalysis fitting/count_peak.py (commit 2a132385).
 # AN-20-111 §7: linear poly on sidebands, subtract under peak (mode='subtract'/'hybrid').
 # RooFit-path preference = upstream ROOT TF1 fittools (not scipy/iminuit).
+#
+# Peak window (Sol / CDTE-25): yield, statistical error, and sideband masking all use
+# the same inclusive bin range [peak_bin_low, peak_bin_high]. Default half-width is
+# (xhigh-xlow)/4 centered on the histogram (same fraction as fitinvmass.py).
 
 
 import sys
@@ -18,7 +22,38 @@ import ROOT
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
 
 
-def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
+def _peak_bin_range(hist, peak_halfwidth_frac=0.25, peak_halfwidth=None):
+    """Return inclusive (binlow, binhigh) for the peak / excluded sideband core.
+
+    Parameters
+    ----------
+    hist : ROOT.TH1
+    peak_halfwidth_frac : float
+        Fraction of the full histogram x-range used as half-width (default 1/4).
+        Ignored when ``peak_halfwidth`` is set.
+    peak_halfwidth : float or None
+        Absolute half-width in the same units as the histogram x-axis.
+    """
+    nbins = hist.GetNbinsX()
+    xlow = hist.GetBinLowEdge(1)
+    xhigh = hist.GetBinLowEdge(nbins) + hist.GetBinWidth(nbins)
+    fitcenter = 0.5 * (xlow + xhigh)
+    if peak_halfwidth is not None:
+        half = float(peak_halfwidth)
+    else:
+        half = peak_halfwidth_frac * (xhigh - xlow)
+    binlow = hist.FindBin(fitcenter - half)
+    binhigh = hist.FindBin(fitcenter + half)
+    # Clamp to valid histogram bins
+    binlow = max(1, int(binlow))
+    binhigh = min(nbins, int(binhigh))
+    if binhigh < binlow:
+        binlow, binhigh = binhigh, binlow
+    return binlow, binhigh, (xlow, xhigh), fitcenter
+
+
+def count_peak(hist, label, extrainfo, gargs, mode='subtract',
+               peak_halfwidth_frac=0.25, peak_halfwidth=None):
     ### return the integral (and error estimate) under a peak in a histogram, 
     ### subtracting the background contribution from sidebands
     # input arguments:
@@ -28,6 +63,7 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
     # - gargs = dict containgin global program parameters
     # - mode = 'gfit' or 'subtract'
     #           or 'hybrid', which returns subtract results but makes fancy 'gfit' plot anyway
+    # - peak_halfwidth_frac / peak_halfwidth: shared peak window for masking, yield, errors
     # returns: a tuple with the following elements:
     # - integral under the peak (background subtracted)
     # - estimate of statistical error
@@ -37,20 +73,15 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
     #   (not yet implemented for 'gfit' method)
 
     # initializations
-    nbins = hist.GetNbinsX()
-    xlow = hist.GetBinLowEdge(1)
-    xhigh = hist.GetBinLowEdge(nbins)+hist.GetBinWidth(nbins)
+    binlow, binhigh, (xlow, xhigh), fitcenter = _peak_bin_range(
+        hist, peak_halfwidth_frac=peak_halfwidth_frac, peak_halfwidth=peak_halfwidth)
     fitrange = (xlow, xhigh)
-    fitcenter = (xlow + xhigh)/2.
-    fithalfwidth = (xhigh - xlow)/4.
     histclone = hist.Clone()
-    binlow = histclone.FindBin(fitcenter-fithalfwidth)
-    binhigh = histclone.FindBin(fitcenter+fithalfwidth)
 
-    # take into account only sidebands, not peak
-    for i in range(binlow, binhigh):
-        histclone.SetBinContent(i,0)
-        histclone.SetBinError(i,0)
+    # take into account only sidebands, not peak (same inclusive window as yield)
+    for i in range(binlow, binhigh + 1):
+        histclone.SetBinContent(i, 0)
+        histclone.SetBinError(i, 0)
 
     # make background-only fit
     guess = [0.,0.]
@@ -72,25 +103,25 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
         globfit, paramdict, globfitobj = ft.poly_plus_doublegauss_fit(hist, fitrange, guess)
 
     # METHOD 1: subtract background from peak and count remaining instances
+    # Yield and errors use the SAME inclusive peak bin window [binlow, binhigh].
     if(mode=='subtract' or mode=='hybrid'):
-        histclone2 = hist.Clone()
-        histclone2.Add(backfit, -1)
-        #npeak = 0.
-        #staterror2 = 0.
-        #for i in range(binlow+1, binhigh+1):
-        #    npeak += histclone2.GetBinContent(i)
-        #    staterror2 += np.power(histclone2.GetBinError(i), 2)
-        npeak = hist.Integral() - backfit.Integral(xlow, xhigh)/hist.GetBinWidth(1)
-        staterror2 = sum([hist.GetBinError(i)**2 for i in range(binlow+1, binhigh+1)])
-        # calculate systematic error by repeating the above procedure
-        # with different fit functions with parameters varied within their uncertainties
-        syserror2 = 0
-        for param in [0,1]:
+        # backfit from poly_fit is in histogram bin-content units (counts/bin);
+        # Eval at bin center ≈ expected background in that bin (upstream convention).
+        npeak = 0.
+        staterror2 = 0.
+        for i in range(binlow, binhigh + 1):
+            npeak += hist.GetBinContent(i) - backfit.Eval(hist.GetBinCenter(i))
+            staterror2 += hist.GetBinError(i) ** 2
+        # systematic: vary background fit parameters within uncertainties
+        syserror2 = 0.
+        for param in [0, 1]:
             tempfit = ROOT.TF1()
             backfit.Copy(tempfit)
-            tempfit.SetParameter(param, backfit.GetParameter(param)+backfit.GetParError(param))
-            tempyield = hist.Integral() - tempfit.Integral(xlow, xhigh)/hist.GetBinWidth(1)
-            syserror2 += (npeak - tempyield)**2
+            tempfit.SetParameter(param, backfit.GetParameter(param) + backfit.GetParError(param))
+            tempyield = 0.
+            for i in range(binlow, binhigh + 1):
+                tempyield += hist.GetBinContent(i) - tempfit.Eval(hist.GetBinCenter(i))
+            syserror2 += (npeak - tempyield) ** 2
         staterror = np.sqrt(staterror2)
         syserror = np.sqrt(syserror2)
         res = (npeak, staterror, syserror)
@@ -102,9 +133,12 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
     elif mode=='gfit':
         intpeak = np.sqrt(2*np.pi)*(paramdict['A_{1}']*paramdict['#sigma_{1}']
                                         + paramdict['A_{2}']*paramdict['#sigma_{2}'])
-        sidexbinwidth = histclone.GetBinWidth(1) # to do: make more robust and general
+        sidexbinwidth = hist.GetBinWidth(1) # to do: make more robust and general
         npeak = intpeak/sidexbinwidth # calculate number of instances instead of integral
-        npeak_error = globfit.IntegralError(fitrange[0],fitrange[1])
+        # IntegralError over the same peak window used for sideband masking
+        peak_xlow = hist.GetBinLowEdge(binlow)
+        peak_xhigh = hist.GetBinLowEdge(binhigh) + hist.GetBinWidth(binhigh)
+        npeak_error = globfit.IntegralError(peak_xlow, peak_xhigh)
         npeak_error /= sidexbinwidth
         res = (npeak, npeak_error, 0)
 
@@ -139,13 +173,15 @@ def count_peak(hist, label, extrainfo, gargs, mode='subtract'):
 
 def count_peak_unbinned(values, weights, variable, mode='subtract',
                         label=None, lumi=None, extrainfo=None,
-                        histname='sideband', plotdir=None):
+                        histname='sideband', plotdir=None,
+                        peak_halfwidth_frac=0.25, peak_halfwidth=None):
     ### wrapper around fitting function using more modern paradigm for input parameters
     # input arguments:
     # - values: np array of sideband values
     # - weights: np array of weights corresponding to values
     # - variable: dict with all information about the sideband variable
     # - mode: passed down to called function
+    # - peak_halfwidth_frac / peak_halfwidth: peak window knob (see count_peak)
     
     # make a ROOT histogram with the values and weights
     counts = np.histogram(values, variable['bins'], weights=weights)[0]
@@ -165,4 +201,6 @@ def count_peak_unbinned(values, weights, variable, mode='subtract',
     fitinfo['helpdir'] = plotdir
 
     # call underlying function
-    return count_peak(hist, label, extrainfo, fitinfo, mode=mode)
+    return count_peak(hist, label, extrainfo, fitinfo, mode=mode,
+                      peak_halfwidth_frac=peak_halfwidth_frac,
+                      peak_halfwidth=peak_halfwidth)

@@ -20,9 +20,15 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 | `genWeight`, `Pileup_nTrue` | MC weights / PU (→ `_weight`, `_nTrueInt` in output) |
 | `run`, `luminosityBlock`, `event` | Event ID |
 
-### Output (analysis schema, unchanged)
+### Output (analysis schema)
 
 `nimloth` / `celeborn` / `laurelin` / `telperion` with `_RPV`, `_mass`, `_weight`, …
+
+**Tracking nuisances (CDTE-26 / Sol):** laurelin/telperion keep each daughter's
+impact parameters (`_d0Pos`, `_dzPos`, `_d0Neg`, `_dzNeg` from DisplacedV0
+`_V0D0*` / `_V0Dz*`) and daughter–daughter `_trackdR`. Nearest charged-track
+distance in the matched jet is **not** computed yet (`_trkNearestJetDistPos/Neg`
+are NaN schema hooks — needs jet↔V0 matching upstream; do not invent values).
 
 ### Usage
 

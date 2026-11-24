@@ -24,7 +24,7 @@ Cross-links: [first-C recipe](first-c-delta2d-recipe.md) · [lxplus runbook](lxp
 | HLT | Run 2 double-μ / TkMu | Unprescaled `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8`; **drop TkMu** | **DONE (docs/code)** baseline wired; menu presence **TODO-VERIFY**; TkMu not listed | `samples/hlt_paths_2024.txt`; `displacedV0_cfi.py` → `hltPaths` |
 | \(b\)-jet veto | Loose DeepCSV on CHS | **DeepJet** (or ParticleNet / UParT) on AK4 **Puppi**, not CHS; 2024 loose WP | **DONE (docs/code)** `slimmedJetsPuppi` + `Jet_btagDeepFlavB`; WP `0.0494` **TODO-VERIFY** | `JetAnalyzer`; `samples/deepjet_wp_2024.md`; `v0builder.py --deepjet-loose-wp` |
 | MC & pileup | DYJetsToLL 13 TeV | Summer24 **13.6 TeV** DY; **genWeight** signs; **2024 PU** reweight | **DONE (docs/code)** Summer24 stub + `genWeight`/`Pileup_nTrue` hooks; live DAS/PU JSON/σ **TODO-VERIFY**; offline fill often `--nopileup` until wired | `samples/sim_dy_m50_13p6.txt`; `DisplacedV0Ntuple`; `conditions.md`; `reweighting/pileup/` |
-| Low-Δ2D norm & fits | Linear sideband; norm Δ2D ≲ 0.5–2 cm | Higher PU → check lowest-bin fit; consider **bkg-shape systematic** | **DONE (docs/code)** sideband poly + `normrange`; bkg-shape variation **TODO (later)** | `fitting/`; `analysis/config_ksvars.py`; method §2.6–2.8 |
+| Low-Δ2D norm & fits | Linear sideband; norm Δ2D ≲ 0.5–2 cm | Higher PU → check lowest-bin fit; consider **bkg-shape systematic** | **DONE (docs/code)** sideband poly + `normrange`; peak window aligned (CDTE-25); shared `norm_scale` + `norm_shared_*`; `--norm-stability-uppers`; bkg-shape poly variation **TODO (later)** | `fitting/count_peak.py`; `analysis/mcvsdata_fill.py`; method §2.6–2.8 |
 | Era splitting | 2016 pre/post-APV | Split **2024 C–I** as diagnostic (not required for first-C) | **DONE (docs)** C–I stubs listed; first freeze = Run2024D; multi-era combine **TODO (later)** | `samples/data_muon_2024.txt`; plan M9 |
 | Efficiency vs SF | \(C(\Delta_{2D})\) Data/MC | `efficiencystudy/`: absolute ε needs custom GEN with **all gen \(K_S\)** | **DONE (docs)** caveat recorded; absolute ε **TODO (later)** / optional M11 | `efficiencystudy/README.md`; plan M11 |
 
@@ -61,8 +61,10 @@ Cross-links: [first-C recipe](first-c-delta2d-recipe.md) · [lxplus runbook](lxp
 ### 5. Low-Δ2D sideband / bkg-shape systematic
 
 - Default: linear poly on mass sidebands; low-Δ2D normalization via `normrange` (recipe: `[0, 2]` cm; AN historically also discusses ≲ 0.5 cm — keep configs consistent with method §2.6).
+- CDTE-25: `count_peak` yield + stat error share one peak window (`--peak-halfwidth-frac`); fill writes shared `norm_scale` + `norm_shared_up/down`; `--norm-stability-uppers` for ±1-bin-style reference checks.
 - Higher 2024 PU can stress the lowest Δ2D bin: inspect fit quality / χ² there before freezing.
 - **TODO (later):** vary sideband poly degree and/or sideband windows as a **background-shape systematic** in the SF envelope (method §2.8 / plan §6).
+
 
 ### 6. Era C–I split diagnostic
 

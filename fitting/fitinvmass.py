@@ -178,10 +178,11 @@ if __name__=='__main__':
     xwidth = (xhigh - xlow)/4.
 
     # remove middle band and fit sidebands to obtain background
+    # Inclusive [binlow, binhigh] — same convention as fitting/count_peak.py (CDTE-25).
     histclone = hist.Clone()
     binlow = histclone.FindBin(xcenter-xwidth)
     binhigh = histclone.FindBin(xcenter+xwidth)
-    for binnb in range(binlow,binhigh):
+    for binnb in range(binlow, binhigh + 1):
         histclone.SetBinContent(binnb,0)
         histclone.SetBinError(binnb,0)
     guess = [0.]*(args.polydegree+1)
