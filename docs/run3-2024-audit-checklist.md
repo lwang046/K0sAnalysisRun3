@@ -20,7 +20,7 @@ Cross-links: [first-C recipe](first-c-delta2d-recipe.md) · [lxplus runbook](lxp
 
 | Component | AN-20-111 | Verify for 2024 | Repo status | Where |
 | --- | --- | --- | --- | --- |
-| Primary datasets | DoubleMuon | **Muon0 and Muon1** (not DoubleMuon) | **DONE (docs/code)** stubs + CRAB twins; DAS strings **TODO-VERIFY** | `samples/data_muon_2024.txt`; `ntuplizer/DisplacedV0/test/crab_data_2024*.py` |
+| Primary datasets | DoubleMuon | **Muon0 and Muon1** (not DoubleMuon) | **DONE (docs/code)** stubs + CRAB twins; DAS strings **TODO-VERIFY** | `samples/data_muon_2024.txt`; `ntuplizer/K0sAnalysis/DisplacedV0/test/crab_data_2024*.py` |
 | HLT | Run 2 double-μ / TkMu | Unprescaled `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8`; **drop TkMu** | **DONE (docs/code)** baseline wired; menu presence **TODO-VERIFY**; TkMu not listed | `samples/hlt_paths_2024.txt`; `displacedV0_cfi.py` → `hltPaths` |
 | \(b\)-jet veto | Loose DeepCSV on CHS | **DeepJet** (or ParticleNet / UParT) on AK4 **Puppi**, not CHS; 2024 loose WP | **DONE (docs/code)** `slimmedJetsPuppi` + `Jet_btagDeepFlavB`; WP `0.0494` **TODO-VERIFY** | `JetAnalyzer`; `samples/deepjet_wp_2024.md`; `v0builder.py --deepjet-loose-wp` |
 | MC & pileup | DYJetsToLL 13 TeV | Summer24 **13.6 TeV** DY; **genWeight** signs; **2024 PU** reweight | **DONE (docs/code)** Summer24 stub + `genWeight`/`Pileup_nTrue` hooks; live DAS/PU JSON/σ **TODO-VERIFY**; offline fill often `--nopileup` until wired | `samples/sim_dy_m50_13p6.txt`; `DisplacedV0Ntuple`; `conditions.md`; `reweighting/pileup/` |
@@ -88,9 +88,10 @@ Do **not** claim these until executed on lxplus / CMSLPC:
 - [ ] `cmsrel` / `scram b` / one-file `cmsRun` data + MC (see [cmsrun-smoke-test.md](cmsrun-smoke-test.md))
 - [ ] CRAB smoke → full; sideband fits; `mcvsdata_fill`; SF JSON
 
-Package placement for scram (Neon): prefer
+Package placement for scram (Neon):
 `$CMSSW_BASE/src/K0sAnalysis/DisplacedV0`
-(two-level Subsystem/Package). A code worker may still be relocating files /
-updating Python imports — follow that worker’s PR if paths differ.
+(two-level Subsystem/Package). Repo path:
+`ntuplizer/K0sAnalysis/DisplacedV0`. Symlink:
+`ln -s …/ntuplizer/K0sAnalysis K0sAnalysis` under `$CMSSW_BASE/src`.
 
 Source: Project Context `docs/gemini-neon-review-2026-11-24.md` (Neon paste); AN-20-111; this repo’s method/plan docs.

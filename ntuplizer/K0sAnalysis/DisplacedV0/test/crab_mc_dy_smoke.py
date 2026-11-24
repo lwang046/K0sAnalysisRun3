@@ -3,7 +3,7 @@
 Use this before the full ``crab_mc_dy.py`` submit.
 
   export CRAB_STORAGE_SITE=<your writeable T2>
-  crab submit -c DisplacedV0/test/crab_mc_dy_smoke.py
+  crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy_smoke.py
 """
 import os
 import sys

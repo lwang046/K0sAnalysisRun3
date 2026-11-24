@@ -39,7 +39,7 @@ K0sAnalysisRun3/
 ├── README.md
 ├── conditions.md                 # GT / era aliases (fill on first CRAB)
 ├── samples/                      # DAS stubs, HLT, cert pointers (M2)
-├── ntuplizer/DisplacedV0/        # slim CMSSW package (V0/Trigger/Lepton/Jet)
+├── ntuplizer/K0sAnalysis/DisplacedV0/        # slim CMSSW package (V0/Trigger/Lepton/Jet)
 ├── skimming/                     # DY skim (still thin; v0builder can apply AN §5)
 ├── v0building/                   # AN §6 selection + DisplacedV0→laurelin
 ├── fitting/                      # RooFit/TF1 sideband fits (ported)
@@ -68,19 +68,15 @@ Full steps, MagField notes, and branch checklist:
 Run 3 physics gates before freezing SF:
 [`docs/run3-2024-audit-checklist.md`](docs/run3-2024-audit-checklist.md).
 
-Neon recommends a two-level scram layout
-`$CMSSW_BASE/src/K0sAnalysis/DisplacedV0`
-(a code worker may still be relocating files / updating imports — use that PR’s
-paths if they differ). Example:
+Neon two-level scram layout: `$CMSSW_BASE/src/K0sAnalysis/DisplacedV0`
+(repo path `ntuplizer/K0sAnalysis/DisplacedV0`). Example:
 
 ```bash
 cmsrel CMSSW_14_0_X   # match MiniAOD campaign token
 cd CMSSW_*/src && cmsenv
-mkdir -p K0sAnalysis
-ln -s /path/to/K0sAnalysisRun3/ntuplizer/DisplacedV0 K0sAnalysis/DisplacedV0
+# scram needs Subsystem/Package: $CMSSW_BASE/src/K0sAnalysis/DisplacedV0
+ln -s /path/to/K0sAnalysisRun3/ntuplizer/K0sAnalysis K0sAnalysis
 scram b -j8
-# Until imports are updated for the subsystem, smoke cfgs may still expect
-# DisplacedV0/… at $CMSSW_BASE/src — see docs/cmsrun-smoke-test.md
 cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \
   inputFiles=file:/path/to/miniaod.root maxEvents=200
 cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \

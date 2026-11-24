@@ -66,7 +66,7 @@ dasgoclient -query='dataset=/DYto2L*13p6TeV*amcatnloFXFX*/Run*2024*MiniAOD*/MINI
 ```
 
 Freeze confirmed strings into `samples/data_muon_2024.txt`, `samples/sim_dy_m50_13p6.txt`, and `conditions.md`.  
-If PromptReco MiniAOD is gone, use the MiniAODv6 **parent** of the NanoAOD datasets above — update `ntuplizer/DisplacedV0/test/crab_common.py` `DATA_DAS` / `MC_DAS_DY` to match.
+If PromptReco MiniAOD is gone, use the MiniAODv6 **parent** of the NanoAOD datasets above — update `ntuplizer/K0sAnalysis/DisplacedV0/test/crab_common.py` `DATA_DAS` / `MC_DAS_DY` to match.
 
 ### C. Golden / PU / brilcalc (**TODO-VERIFY**)
 
@@ -104,9 +104,7 @@ export SCRAM_ARCH=el8_amd64_gcc12   # verify for chosen release
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cmsrel CMSSW_14_0_19                 # or CMSSW_15_0_X if MiniAODv6 / 150X_
 cd CMSSW_14_0_19/src && cmsenv
-# Neon: $CMSSW_BASE/src/K0sAnalysis/DisplacedV0 (code worker may still move files)
-mkdir -p K0sAnalysis
-ln -s $REPO/ntuplizer/DisplacedV0 K0sAnalysis/DisplacedV0
+ln -s $REPO/ntuplizer/K0sAnalysis K0sAnalysis   # → src/K0sAnalysis/DisplacedV0
 scram b -j8
 
 # One file each (after DAS freeze):
@@ -120,20 +118,20 @@ cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \
 cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \
   inputFiles=file:$PWD/dy_one.root maxEvents=200
 # Optional: useESMagneticField=True after MagField_cff loads (see docs/cmsrun-smoke-test.md)
-# If imports still expect flat DisplacedV0, use a temporary top-level symlink — see smoke doc.
+# Optional: enableDimuonPreFilter=False to debug without AN §5 Path filter
 ```
 
 **Exit:** tree `displacedV0Ntuple/events`; `_V0Type==1` mass near 0.498. Pin exact release + GT in `conditions.md`.
 
 ### F. CRAB smoke → full (M4)
 
-From `$CMSSW_BASE/src` after green smoke (`K0sAnalysis/DisplacedV0` still linked):
+From `$CMSSW_BASE/src` after green smoke (`K0sAnalysis` still linked):
 
 ```bash
 # REQUIRED — your writeable site (example only; do not invent a T2 in git):
 export CRAB_STORAGE_SITE=T2_CH_CERN   # replace with *your* site
 
-# Smoke first (paths under K0sAnalysis/…; use DisplacedV0/test/… if flat-linked):
+# Smoke first:
 crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024_smoke.py   # Muon0, totalUnits=20
 crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy_smoke.py        # DY, totalUnits=2
 # crab status -d <workArea>/<request> until done; check one output ROOT
@@ -260,6 +258,6 @@ Plan §6 items 1–8: DY controls, Ks mass, low-Δ2D \(C\approx1\), pixel-layer 
 - Recipe: `docs/first-c-delta2d-recipe.md`
 - Smoke detail: `docs/cmsrun-smoke-test.md`
 - **Run 3 (2024) audit checklist:** [`run3-2024-audit-checklist.md`](run3-2024-audit-checklist.md)
-- CRAB table: `ntuplizer/DisplacedV0/test/README.md`
+- CRAB table: `ntuplizer/K0sAnalysis/DisplacedV0/test/README.md`
 - Status: `docs/k0s-run3-scaffold-status.md`
 - Method / plan: `docs/displaced-track-efficiency-run3-2024.md`, `docs/displaced-track-efficiency-implementation-plan.md`

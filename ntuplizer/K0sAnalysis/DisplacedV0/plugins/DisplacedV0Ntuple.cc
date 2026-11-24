@@ -7,11 +7,11 @@
  (GenEventInfoProduct::weight + PileupSummaryInfo::getTrueNumInteractions).
  Full LHE/PS weight histograms still deferred.
 */
-#include "DisplacedV0/plugins/DisplacedV0Ntuple.h"
-#include "DisplacedV0/interface/V0Analyzer.h"
-#include "DisplacedV0/interface/TriggerAnalyzer.h"
-#include "DisplacedV0/interface/LeptonAnalyzer.h"
-#include "DisplacedV0/interface/JetAnalyzer.h"
+#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
+#include "K0sAnalysis/DisplacedV0/interface/TriggerAnalyzer.h"
+#include "K0sAnalysis/DisplacedV0/interface/LeptonAnalyzer.h"
+#include "K0sAnalysis/DisplacedV0/interface/JetAnalyzer.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -40,10 +40,13 @@ DisplacedV0Ntuple::DisplacedV0Ntuple(const edm::ParameterSet& iConfig)
         consumes<std::vector<PileupSummaryInfo>>(iConfig.getParameter<edm::InputTag>("pileupInfo"));
   }
 
-  // Optional ES MagField (IdealMagneticFieldRecord). Requires MagneticField_cff in the cfg.
-  // Preferred long-term: TransientTrackBuilder from TransientTrackRecord (see smoke docs).
+  // Optional ES MagField + TransientTrackBuilder. Requires MagneticField_cff,
+  // GeometryRecoDB_cff, and TransientTrackBuilder_cfi in the cfg when enabled.
+  // Neon / CMSSW_14_0_X–15_0_X: prefer esConsumes over Run-2 iSetup.get<>.
   if (useESMagneticField_) {
     bFieldToken_ = esConsumes<MagneticField, IdealMagneticFieldRecord>();
+    ttBuilderToken_ = esConsumes<TransientTrackBuilder, TransientTrackRecord>(
+        edm::ESInputTag("", "TransientTrackBuilder"));
   }
 
   v0Analyzer_ = std::make_unique<V0Analyzer>(iConfig, this);

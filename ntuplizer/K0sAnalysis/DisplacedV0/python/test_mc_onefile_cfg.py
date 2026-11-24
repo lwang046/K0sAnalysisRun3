@@ -4,11 +4,14 @@ Placeholder for one-file ``cmsRun`` only. CRAB production uses
 ``displacedV0_mc_cfg.py`` (same DisplacedV0 sequence, ``maxEvents=-1``).
 
 Usage (from $CMSSW_BASE/src after cmsenv + scram b):
-  cmsRun DisplacedV0/python/test_mc_onefile_cfg.py \\
+  cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \\
     inputFiles=file:/path/to/miniaodsim.root maxEvents=200
 
-  cmsRun DisplacedV0/python/test_mc_onefile_cfg.py \\
+  cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \\
     inputFiles=file:/path/to/miniaodsim.root maxEvents=200 useESMagneticField=True
+
+  cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \\
+    inputFiles=file:/path/to/miniaodsim.root maxEvents=200 enableDimuonPreFilter=False
 
 Era: Run3_2024. GT: auto:phase1_2024_realistic.
 Expect genWeight / Pileup_nTrue filled; same V0/muon/jet/HLT branches as data.
@@ -25,7 +28,14 @@ options.register(
     False,
     VarParsing.multiplicity.singleton,
     VarParsing.varType.bool,
-    "Use IdealMagneticFieldRecord instead of OAEParametrizedMagneticField(3_8T)",
+    "Use IdealMagneticFieldRecord + TransientTrackBuilder instead of OAE 3_8T",
+)
+options.register(
+    "enableDimuonPreFilter",
+    True,
+    VarParsing.multiplicity.singleton,
+    VarParsing.varType.bool,
+    "AN §5 dimuon pre-filter ahead of V0Analyzer (disable for debugging)",
 )
 options.parseArguments()
 
@@ -55,10 +65,16 @@ process.TFileService = cms.Service(
     "TFileService", fileName=cms.string("displacedV0_mc_smoke.root")
 )
 
-from DisplacedV0.displacedV0_cfi import displacedV0Ntuple
+from K0sAnalysis.DisplacedV0.displacedV0_cfi import displacedV0Ntuple
+from K0sAnalysis.DisplacedV0.dimuonPreFilter_cfi import dimuonPreFilter
 
 process.displacedV0Ntuple = displacedV0Ntuple.clone(
     isData=cms.bool(False),
     useESMagneticField=cms.bool(options.useESMagneticField),
 )
-process.p = cms.Path(process.displacedV0Ntuple)
+process.dimuonPreFilter = dimuonPreFilter.clone()
+
+if options.enableDimuonPreFilter:
+    process.p = cms.Path(process.dimuonPreFilter + process.displacedV0Ntuple)
+else:
+    process.p = cms.Path(process.displacedV0Ntuple)

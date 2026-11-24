@@ -7,7 +7,7 @@ Before submit on lxplus:
   1. TODO-VERIFY DAS string (samples/sim_dy_m50_13p6.txt, conditions.md)
   2. Match CMSSW to 140X_ / 150X_ token in the chosen dataset
   3. export CRAB_STORAGE_SITE=<your writeable T2>
-  4. crab submit -c DisplacedV0/test/crab_mc_dy.py
+  4. crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy.py
 """
 import os
 import sys

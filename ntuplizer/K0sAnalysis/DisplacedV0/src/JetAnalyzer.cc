@@ -10,8 +10,8 @@
  JEC/MET/substructure bulk dropped. Loose WP applied offline (M5).
 */
 
-#include "DisplacedV0/interface/JetAnalyzer.h"
-#include "DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/JetAnalyzer.h"
+#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
 
 #include <cmath>
 

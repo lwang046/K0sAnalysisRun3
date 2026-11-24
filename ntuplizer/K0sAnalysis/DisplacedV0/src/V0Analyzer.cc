@@ -10,14 +10,15 @@
    - Tokens: ntuple_->packedCandidatesToken / lostTracksToken / beamSpotToken
    - Unused ele/muon getByToken calls from upstream analyze() dropped
    - MagField: OAE "3_8T" by default; optional ES IdealMagneticFieldRecord
-     when DisplacedV0Ntuple::useESMagneticField_ is true (cfg switch).
+     + TransientTrackBuilder (TransientTrackRecord) when useESMagneticField_
+   - Tracks: hasTrackDetails() + pseudoTrack() (was bestTrack()); see TODO-VERIFY
    - CMSSW preselection unchanged (loose quality + IP sig>2; DCA/cylinder/
      Kalman χ²/mass windows as upstream). AN-20-111 §6 tight cuts stay offline
      in v0building/v0selections.py (same as K0sAnalysis).
    - Do not apply Δ2D/σ cut (matches AN §6 / upstream).
 */
 
-#include "DisplacedV0/interface/V0Analyzer.h"
+#include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
 
 #include <cmath>
 
@@ -127,17 +128,20 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
   edm::Handle<reco::BeamSpot> beamSpotHandle;
   iEvent.getByToken(ntuple_->beamSpotToken, beamSpotHandle);
 
-  // MagField resolution (Run3 hardening):
-  //   useESMagneticField=True  → IdealMagneticFieldRecord from EventSetup
-  //                              (load MagneticField_cff + Geometry in the cfg;
-  //                               TransientTrackBuilder is the preferred next step
-  //                               if reco::TransientTrack(Track, MagField*) is removed).
+  // MagField / TransientTrackBuilder resolution (Run3 / Neon hardening):
+  //   useESMagneticField=True  → IdealMagneticFieldRecord + TransientTrackBuilder
+  //                              via esConsumes (load MagneticField_cff + Geometry
+  //                              + TransientTrackBuilder_cfi in the cfg).
   //   useESMagneticField=False → OAEParametrizedMagneticField("3_8T") as upstream
   //                              (no MagField ES products required for smoke).
+  // TODO-VERIFY on lxplus: both modes compile/link on CMSSW_14_0_X / 15_0_X;
+  //   TransientTrackBuilder label "TransientTrackBuilder" still valid.
   std::unique_ptr<MagneticField> ownedBField;
   const MagneticField* bfield = nullptr;
+  const TransientTrackBuilder* ttBuilder = nullptr;
   if (ntuple_->useESMagneticField_) {
     bfield = &iSetup.getData(ntuple_->bFieldToken_);
+    ttBuilder = &iSetup.getData(ntuple_->ttBuilderToken_);
   } else {
     ownedBField = std::make_unique<OAEParametrizedMagneticField>("3_8T");
     bfield = ownedBField.get();
@@ -156,18 +160,22 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
   _beamSpotY = beamSpotHandle->position().y();
   _beamSpotZ = beamSpotHandle->position().z();
 
-  // preselect PackedCandidates and lost tracks (see help function below)
+  // preselect PackedCandidates and lost tracks (see help function below).
+  // TODO-VERIFY (docs-level certainty without scram): for 2024 MiniAODv4/v6,
+  //   pat::PackedCandidate::hasTrackDetails() + pseudoTrack() remain the MiniAOD
+  //   track API; lostTracks InputTag remains "lostTracks" (cfi default).
+  //   Confirm on lxplus smoke that packedPFCandidates + lostTracks both yield tracks.
   std::vector<reco::Track> seltracks;
   for (const pat::PackedCandidate& pc : *packedCandidates) {
     if (pc.hasTrackDetails()) {
-      reco::Track tr = *pc.bestTrack();
+      reco::Track tr = pc.pseudoTrack();
       std::unordered_map<std::string, double> temp = getTrackVariables(tr, beamSpotHandle, bfield);
       if (temp["pass"] > 0.5) seltracks.push_back(tr);
     }
   }
   for (const pat::PackedCandidate& pc : *lostTracks) {
     if (pc.hasTrackDetails()) {
-      reco::Track tr = *pc.bestTrack();
+      reco::Track tr = pc.pseudoTrack();
       std::unordered_map<std::string, double> temp = getTrackVariables(tr, beamSpotHandle, bfield);
       if (temp["pass"] > 0.5) seltracks.push_back(tr);
     }
@@ -188,7 +196,7 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
       try {
         // combine pair of tracks into a V0 vertex
         // (see help function below)
-        temp = VZeroFitter(tr1, tr2, beamSpotHandle, primaryVertex, bfield, iEvent);
+        temp = VZeroFitter(tr1, tr2, beamSpotHandle, primaryVertex, bfield, ttBuilder, iEvent);
       } catch (...) {
         continue;
       }
@@ -250,7 +258,17 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
     }
     if (_nV0s == nV0s_max) break;
   }
-  // ownedBField unique_ptr cleans up OAE; ES MagField is not owned here.
+  // ownedBField unique_ptr cleans up OAE; ES MagField / TTBuilder are not owned here.
+}
+
+reco::TransientTrack V0Analyzer::makeTransientTrack(
+    const reco::Track& tr,
+    const MagneticField* bfield,
+    const TransientTrackBuilder* ttBuilder) const {
+  if (ttBuilder) {
+    return ttBuilder->build(tr);
+  }
+  return reco::TransientTrack(tr, bfield);
 }
 
 std::unordered_map<std::string, double> V0Analyzer::getTrackVariables(
@@ -358,6 +376,7 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(
     edm::Handle<reco::BeamSpot> beamSpotHandle,
     const reco::Vertex& primaryVertex,
     const MagneticField* bfield,
+    const TransientTrackBuilder* ttBuilder,
     const edm::Event& iEvent) {
   // FIT AND SELECT V0 VERTICES FROM TWO TRACKS AND CALCULATE PROPERTIES
   std::unordered_map<std::string, double> outputmap = {
@@ -386,8 +405,8 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(
   // the following fragment applies some conditions on the point of closest approach,
   // namely that the distance of closest approach must be reasonably small
   // and that the point of closest approach must be situated not too far from the center of CMS.
-  reco::TransientTrack trtr1(tr1, bfield);
-  reco::TransientTrack trtr2(tr2, bfield);
+  reco::TransientTrack trtr1 = makeTransientTrack(tr1, bfield, ttBuilder);
+  reco::TransientTrack trtr2 = makeTransientTrack(tr2, bfield, ttBuilder);
   if (!trtr1.impactPointTSCP().isValid() or !trtr2.impactPointTSCP().isValid()) return outputmap;
   FreeTrajectoryState state1 = trtr1.impactPointTSCP().theState();
   FreeTrajectoryState state2 = trtr2.impactPointTSCP().theState();
@@ -424,8 +443,8 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(
   reco::Track tr1fix = fixTrackCovariance(tr1);
   reco::Track tr2fix = fixTrackCovariance(tr2);
   std::vector<reco::TransientTrack> transtracks;
-  transtracks.push_back(reco::TransientTrack(tr1fix, bfield));
-  transtracks.push_back(reco::TransientTrack(tr2fix, bfield));
+  transtracks.push_back(makeTransientTrack(tr1fix, bfield, ttBuilder));
+  transtracks.push_back(makeTransientTrack(tr2fix, bfield, ttBuilder));
   KalmanVertexFitter vtxFitter(true);  // use option true to include track refitting!
   TransientVertex v0vtx = vtxFitter.vertex(transtracks);
   // condition: vertex must be valid

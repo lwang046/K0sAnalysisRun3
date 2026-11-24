@@ -40,7 +40,7 @@ Canonical docs (in-repo `docs/`):
 | **M0** plan defaults | Done | README M0 table / plan §8 |
 | **M1** README + tree | Done | Attribution to AN-20-111 / K0sAnalysis |
 | **M2** samples / HLT / cert / conditions | **First-era freeze (best-effort)** | **Run2024D** PromptReco Muon0/1 + Summer24 DYto2L FxFx stubs; DeepJet placeholder `0.0494`; full DAS/WP still **TODO-VERIFY** |
-| **M3** DisplacedV0 | Analyzers + MagField hardening | `useESMagneticField`; OAE default; **no cmsRun on VM** |
+| **M3** DisplacedV0 | Analyzers + Neon red flags | `K0sAnalysis/DisplacedV0` layout; ES MagField+TTBuilder; `DimuonPreFilter`; **no cmsRun on VM** |
 | Offline fitting / analysis / v0building | Ported + **dry-run passed** | dummy ntuple → v0builder DY path (2026-11-24) |
 | First \(C(\Delta_{2D})\) recipe | Done (doc) | `docs/first-c-delta2d-recipe.md` |
 | **M4** CRAB configs | **Merged prep** | Production psets + smoke/full + `CRAB_STORAGE_SITE`; DAS/lumiMask **TODO-VERIFY**; **no crab submit** — #4 + #5 |

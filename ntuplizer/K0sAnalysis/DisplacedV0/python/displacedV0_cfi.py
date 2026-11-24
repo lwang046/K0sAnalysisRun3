@@ -7,13 +7,14 @@ displacedV0Ntuple = cms.EDAnalyzer(
     "DisplacedV0Ntuple",
     isData=cms.bool(True),
     # MagField: False = OAEParametrizedMagneticField("3_8T") in V0Analyzer (smoke-friendly).
-    # True  = IdealMagneticFieldRecord via ESGetToken (load MagneticField_cff + Geometry
-    #         in the cfg; see docs/cmsrun-smoke-test.md). Next step if needed:
-    #         TransientTrackBuilder from TransientTrackRecord.
+    # True  = IdealMagneticFieldRecord + TransientTrackBuilder via esConsumes
+    #         (load MagneticField_cff + Geometry + TransientTrackBuilder_cfi;
+    #         see docs/cmsrun-smoke-test.md).
     useESMagneticField=cms.bool(False),
     muons=cms.InputTag("slimmedMuons"),
     jets=cms.InputTag("slimmedJetsPuppi"),  # AK4 PUPPI; confirm era default
     packedCandidates=cms.InputTag("packedPFCandidates"),
+    # TODO-VERIFY on lxplus: tag remains "lostTracks" for 2024 MiniAODv4/v6.
     lostTracks=cms.InputTag("lostTracks"),
     vertices=cms.InputTag("offlineSlimmedPrimaryVertices"),
     beamSpot=cms.InputTag("offlineBeamSpot"),

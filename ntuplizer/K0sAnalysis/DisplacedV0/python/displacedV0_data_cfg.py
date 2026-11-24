@@ -5,9 +5,9 @@ The one-file smoke cfg remains the local ``cmsRun`` placeholder; this file is
 the CRAB ``psetName`` (``maxEvents=-1``, production output name).
 
 Usage (CRAB sets input via PoolSource rewrite):
-  # see ntuplizer/DisplacedV0/test/crab_data_2024*.py
+  # see ntuplizer/K0sAnalysis/DisplacedV0/test/crab_data_2024*.py
   # Optional local check:
-  cmsRun DisplacedV0/python/displacedV0_data_cfg.py \\
+  cmsRun K0sAnalysis/DisplacedV0/python/displacedV0_data_cfg.py \\
     inputFiles=file:/path/to/miniaod.root maxEvents=200 \\
     outputFile=displacedV0_Muon0_Run2024D.root
 
@@ -27,7 +27,14 @@ options.register(
     False,
     VarParsing.multiplicity.singleton,
     VarParsing.varType.bool,
-    "Use IdealMagneticFieldRecord instead of OAEParametrizedMagneticField(3_8T)",
+    "Use IdealMagneticFieldRecord + TransientTrackBuilder instead of OAE 3_8T",
+)
+options.register(
+    "enableDimuonPreFilter",
+    True,
+    VarParsing.multiplicity.singleton,
+    VarParsing.varType.bool,
+    "AN §5 dimuon pre-filter ahead of V0Analyzer (disable for debugging)",
 )
 options.parseArguments()
 
@@ -57,10 +64,16 @@ process.TFileService = cms.Service(
     "TFileService", fileName=cms.string(options.outputFile)
 )
 
-from DisplacedV0.displacedV0_cfi import displacedV0Ntuple
+from K0sAnalysis.DisplacedV0.displacedV0_cfi import displacedV0Ntuple
+from K0sAnalysis.DisplacedV0.dimuonPreFilter_cfi import dimuonPreFilter
 
 process.displacedV0Ntuple = displacedV0Ntuple.clone(
     isData=cms.bool(True),
     useESMagneticField=cms.bool(options.useESMagneticField),
 )
-process.p = cms.Path(process.displacedV0Ntuple)
+process.dimuonPreFilter = dimuonPreFilter.clone()
+
+if options.enableDimuonPreFilter:
+    process.p = cms.Path(process.dimuonPreFilter + process.displacedV0Ntuple)
+else:
+    process.p = cms.Path(process.displacedV0Ntuple)

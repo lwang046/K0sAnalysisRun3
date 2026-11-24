@@ -21,7 +21,9 @@ in `python/*.py`; pin exact strings here on the day of the first successful smok
 | DeepJet JSON path | `/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/` | era subdir **TODO-VERIFY** | `btagging.json` / `deepJet_wp_values` |
 | Baseline HLT | `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8` | confirm in Run2024D menu | `samples/hlt_paths_2024.txt` |
 | Companion HLT | `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8` | include in OR only if present **TODO-VERIFY** | |
-| MagField mode | `useESMagneticField=False` (OAE `3_8T` default) | Set `True` after MagField_cff + TransientTrackBuilder smoke | `displacedV0_cfi.py` / docs/cmsrun-smoke-test.md |
+| MagField mode | `useESMagneticField=False` (OAE `3_8T` default) | Set `True` after MagField_cff + TransientTrackBuilder smoke (`esConsumes` MagField + TTBuilder) | `displacedV0_cfi.py` / docs/cmsrun-smoke-test.md |
+| Dimuon Path filter | `enableDimuonPreFilter=True` (2 medium, pT>30/25, \|mμμ−mZ\|<10) | Set `False` to debug without AN §5 pre-filter | production + smoke cfgs |
+| Package path | `$CMSSW_BASE/src/K0sAnalysis/DisplacedV0` | Symlink `ntuplizer/K0sAnalysis` → `src/K0sAnalysis` | docs/cmsrun-smoke-test.md |
 | DY σ (M>50, 13.6 TeV) | XSDB / genXsecAnalyzer | **TODO-VERIFY** — do not reuse 6077.22 pb | |
 | Δ2D bins / norm | method §2.6 / `analysis/config_ksvars.py` | bins `[0,1,2,3,5,7,11,16,22,30,40,60,90,120]` cm; `normrange=[0,2]` | Wired to laurelin `_RPV` |
 
