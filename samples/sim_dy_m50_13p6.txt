@@ -1,54 +1,55 @@
-# DY M(ℓℓ)>50 GeV @ 13.6 TeV MiniAODSIM
+# DY M(ℓℓ)>50 GeV @ 13.6 TeV MiniAODSIM — FROZEN after lxplus DAS search
+# (2026-11-24 Asia/Shanghai). See Project store internal/inclusive-dy-das-search.md.
+#
 # Data era match: Summer24 MiniAODv6 + 150X_ → CMSSW_15_0_22 / el9_amd64_gcc12.
 #
-# STATUS (2026-11-24):
-#   - Inclusive Bin-MLL-50 …v2-v2: exists in DAS but **0 files / 0 events**
-#     (lxplus smoke). Production first-C MUST use inclusive (or stitched /
-#     phase-space-matched) DY — NOT PTLL-100 alone vs inclusive data.
-#   - PTLL-100 …v2-v3: populated (7346 files); M3 cmsRun smoke OK — **smoke only**.
-#   - Cloud VM DAS re-query: cmsweb 401 without VO proxy — cannot reconfirm files here.
+# STATUS:
+#   - Combined DYto2L Bin-MLL-50 Summer24 MiniAODv6: still **0 files** (do not use).
+#   - Production first-C: inclusive **DYto2Mu** Bin-MLL-50 …v2-v6 (no PTLL; μμ channel
+#     matches Muon0/1 PD). 13462 files, ~4.89e8 events; xrd + edmFileUtil OK.
+#   - PTLL-100 DYto2L …v2-v3: smoke-only (phase-space mismatch vs inclusive data).
 #
-# PdmV 2024: PROCESS_[BINNING]_TUNE_BEAME_ME-PS; prefer DYto2L-2Jets + amcatnloFXFX.
+# PdmV 2024: PROCESS_[BINNING]_TUNE_BEAME_ME-PS.
 # Ref: https://cms-pdmv.gitbook.io/project/mccontact/rules-for-run3-2024-dataset-names
 #
 # Discover / refresh (lxplus + CMS VO):
 #   bash scripts/das_discover.sh
+#   dasgoclient -query='dataset=/DYto2Mu*MLL-50*amcatnloFXFX*/RunIII2024Summer24MiniAOD*/MINIAODSIM' | sort
 #   dasgoclient -query='dataset=/DYto2L*13p6TeV*amcatnloFXFX*/Run*2024*MiniAOD*/MINIAODSIM' | sort
-#   dasgoclient -query='dataset=/DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6*/MINIAODSIM' | sort
-#   # Prefer any inclusive (no PTLL) with nfiles>0; freeze here + crab_common.MC_DAS_DY
 
 # ===========================================================================
-# PRODUCTION TARGET (first C) — inclusive MLL>50 — TODO-VERIFY files on DAS
+# FROZEN PRODUCTION (first C) — inclusive DYto2Mu MLL>50 MiniAODv6 …v2-v6
 # ===========================================================================
-# Phase-space matched to inclusive Run2024D + v0builder dy_event_mask (no pTℓℓ cut).
-# Last check 2026-11-24: nfiles=0 / nevents=0 — do not crab submit until populated
-# or replace with another inclusive / stitched MiniAODSIM after DAS confirm.
-/DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
+# No gen-level PTLL cut; matches inclusive Run2024D + v0builder dy_event_mask.
+# Combined DYto2L Bin-MLL-50 Summer24 unavailable (0 files); only PTLL-binned
+# DYto2L has files — those stay smoke/extension only (Codex P1).
+# Example LFN (xrd OK):
+#   /store/mc/RunIII2024Summer24MiniAODv6/DYto2Mu-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/MINIAODSIM/150X_mcRun3_2024_realistic_v2-v6/90001/1e7e454d-508f-4310-92a9-146dffb86e5a.root
+/DYto2Mu-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v6/MINIAODSIM
 
 # ===========================================================================
-# SMOKE-ONLY INTERIM — Bin-MLL-50-PTLL-100 (populated MiniAODv6 …v2-v3)
+# SMOKE-ONLY — DYto2L Bin-MLL-50-PTLL-100 (populated MiniAODv6 …v2-v3)
 # ===========================================================================
-# Used for lxplus M3 one-file cmsRun + crab_mc_dy_smoke.py (MC_DAS_DY_SMOKE).
-# Gen-level pT(ℓℓ)>100 ≠ inclusive data; low-Δ2D norm cannot fix shape mismatch.
-# Do NOT promote to MC_DAS_DY / crab_mc_dy.py for physics first-C.
-# Example LFN (smoke):
+# crab_common.MC_DAS_DY_SMOKE / crab_mc_dy_smoke.py / M3 cmsRun only.
+# Gen pT(ℓℓ)>100 ≠ inclusive data — do NOT promote to MC_DAS_DY for first-C.
+# Example LFN:
 #   /store/mc/RunIII2024Summer24MiniAODv6/DYto2L-2Jets_Bin-MLL-50-PTLL-100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/MINIAODSIM/150X_mcRun3_2024_realistic_v2-v3/2820000/4b2bbedd-7901-45eb-a7ae-ed03d354e655.root
 /DYto2L-2Jets_Bin-MLL-50-PTLL-100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v3/MINIAODSIM
 
-# Alternate primary spellings (query only):
+# ===========================================================================
+# DO NOT USE — combined DYto2L inclusive Summer24 (empty in DAS)
+# ===========================================================================
+# Verified 2026-11-24: nfiles=0 / nevents=0 for all of:
+# /DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
 # /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
 # /DYto2L-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
 
-# Earlier MiniAOD campaign (if MiniAODv6 inclusive becomes available under 140X_):
-# /DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv4-140X_mcRun3_2024_realistic_v26-v*/MINIAODSIM
+# Electron-channel twin (if needed later; not first-C default):
+# /DYto2E-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v4/MINIAODSIM
 
-# Fallback LO MLM / POWHEG — only if FxFx inclusive missing; document in conditions.md.
-# /DYto2L-4Jets_Bin-HT-100to400-MLL-50to120_TuneCP5_13p6TeV_madgraphMLM-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
-# /DYto2Mu_Bin-MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
-
-# Cross section: XSDB / genXsecAnalyzer for the **chosen** sample (inclusive vs PTLL bin).
-# Do not reuse Run 2 6077.22 pb. Record in conditions.md when production DAS is frozen.
+# Cross section: XSDB / genXsecAnalyzer for **DYto2Mu** MLL>50 @ 13.6 TeV.
+# Do not reuse Run 2 6077.22 pb. Record in conditions.md when measured.
 #
-# CRAB: crab_mc_dy.py → MC_DAS_DY (production, TODO-VERIFY);
+# CRAB: crab_mc_dy.py → MC_DAS_DY (DYto2Mu production);
 #       crab_mc_dy_smoke.py → MC_DAS_DY_SMOKE (PTLL-100).
 #       export CRAB_STORAGE_SITE=<your T2> on lxplus — never invent a T2 in git.

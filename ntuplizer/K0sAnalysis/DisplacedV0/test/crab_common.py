@@ -12,15 +12,14 @@ Do **not** invent a T2. Set one of:
 
 Samples / golden JSON
 ---------------------
-Data DAS frozen 2026-11-24 (lxplus M3): ``samples/data_muon_2024.txt``.
-MC production DAS is **TODO-VERIFY** (inclusive MiniAODv6 empty on last check);
-PTLL-100 is smoke-only — see ``samples/sim_dy_m50_13p6.txt``, ``conditions.md``.
+Data + production DY frozen 2026-11-24 (lxplus): ``samples/data_muon_2024.txt``,
+``samples/sim_dy_m50_13p6.txt``, ``conditions.md``.
+PTLL-100 DYto2L is smoke-only (``MC_DAS_DY_SMOKE``).
 Lumi mask: ``samples/cert/README.md`` (golden still TODO-VERIFY latest).
 """
 from __future__ import annotations
 
 import os
-import warnings
 
 from CRABClient.UserUtilities import config as crab_config
 
@@ -39,15 +38,16 @@ DATA_DAS = {
     "Muon1": "/Muon1/Run2024D-PromptReco-v1/MINIAOD",
 }
 
-# Production first-C DY: inclusive MLL>50 matching inclusive data / v0builder.
-# TODO-VERIFY on lxplus: last check (2026-11-24) this DAS entry had **0 files**.
-# Do NOT substitute PTLL-100 here — that sample is smoke-only (phase-space mismatch).
+# FROZEN 2026-11-24: inclusive DYto2Mu MLL>50 MiniAODv6 (no PTLL cut).
+# Combined DYto2L Bin-MLL-50 Summer24 remains empty in DAS; PTLL-binned DYto2L
+# only — do NOT use those for first-C. See samples/sim_dy_m50_13p6.txt.
+# CMSSW_15_0_22 + el9_amd64_gcc12. 13462 files / ~4.89e8 events (lxplus DAS).
 MC_DAS_DY = (
-    "/DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/"
-    "RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM"
+    "/DYto2Mu-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/"
+    "RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v6/MINIAODSIM"
 )
 
-# Smoke-only interim: populated MiniAODv6 (7346 files) used in lxplus M3 cmsRun.
+# Smoke-only: populated DYto2L PTLL-100 (7346 files) from M3 cmsRun.
 # Gen-level pT(ℓℓ)>100 — NOT phase-space matched to inclusive Run2024D data.
 MC_DAS_DY_SMOKE = (
     "/DYto2L-2Jets_Bin-MLL-50-PTLL-100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/"
@@ -120,10 +120,10 @@ def build_mc_dy_config(
     smoke: bool = False,
     storage_site: str | None = None,
 ):
-    """CRAB config for Summer24 DYto2L MLL>50 MiniAODSIM.
+    """CRAB config for Summer24 DY MLL>50 MiniAODSIM.
 
-    smoke=True → ``MC_DAS_DY_SMOKE`` (PTLL-100, pipeline only).
-    smoke=False → ``MC_DAS_DY`` (inclusive production target; TODO-VERIFY files).
+    smoke=True → ``MC_DAS_DY_SMOKE`` (DYto2L PTLL-100, pipeline only).
+    smoke=False → ``MC_DAS_DY`` (inclusive DYto2Mu MLL-50, first-C production).
     """
     tag = "DisplacedV0_DY_Summer24"
     out_file = f"{tag}.root"
@@ -146,15 +146,7 @@ def build_mc_dy_config(
         cfg.Data.unitsPerJob = 1
         cfg.Data.totalUnits = 2
     else:
-        # Inclusive production target. Warn: last DAS check had 0 files.
-        warnings.warn(
-            "MC_DAS_DY is the inclusive production stub; last lxplus check "
-            "(2026-11-24) reported 0 files. TODO-VERIFY with dasgoclient before "
-            "full crab submit — do not silently switch to MC_DAS_DY_SMOKE "
-            "(PTLL-100) for first-C.",
-            UserWarning,
-            stacklevel=2,
-        )
+        # Inclusive DYto2Mu — frozen production (no PTLL cut).
         cfg.Data.inputDataset = MC_DAS_DY
         cfg.Data.unitsPerJob = 2
 
