@@ -8,6 +8,7 @@
  Run3 / K0sAnalysisRun3 adaptations:
    - Owner: DisplacedV0Ntuple* (was multilep*)
    - Configurable HLT OR list via PSet "hltPaths" (baseline Mass3p8)
+   - CDTE-31: store passDimuonHLT only (no per-path HLT_* leaves)
    - Dropped year-by-year HNL trigger cocktail, MET filters, Ele32 emulation,
      and trigger-object matching (not needed for DY+V0)
 */

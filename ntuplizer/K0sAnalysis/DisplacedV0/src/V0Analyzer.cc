@@ -16,8 +16,9 @@
      Kalman χ²/mass windows as upstream). AN-20-111 §6 tight cuts stay offline
      in v0building/v0selections.py (same as K0sAnalysis).
    - Do not apply Δ2D/σ cut (matches AN §6 / upstream).
-   - CDTE-30 slim: storeKsOnly (default), float leaves, drop unc/PCA/Iso/PxPyPz
-     daughter Cartesian / PV-unc; skip getTrackRelIso (unused by first-C).
+   - CDTE-30/31 slim: storeKsOnly (default), float leaves; drop unc/PCA/Iso/
+     PxPyPz, RBS (+Sig), mother/daughter ηφ, D0/Dz (deferred to trackingEff);
+     skip getTrackRelIso (unused by first-C).
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
@@ -39,10 +40,12 @@ V0Analyzer::~V0Analyzer() {}
 
 // beginJob //
 void V0Analyzer::beginJob(TTree* outputTree) {
-  // First-C slim schema: only branches read by v0builder / v0selections /
-  // --apply-dy-selection / mcvsdata_fill (via laurelin). Dropped (unused):
+  // First-C slim schema: branches needed by v0selections + C(Δ2D) via laurelin
+  // (_RPV). Dropped / deferred (CDTE-30/31):
   //   _V0{X,Y,Z}Unc, _V0R{PV,BS}Unc, _V0PCA{X,Y,Z}, _V0Pz,
-  //   _V0P{x,y,z}{Pos,Neg}, _V0Iso{Pos,Neg}, _primaryVertex{X,Y,Z}Unc
+  //   _V0P{x,y,z}{Pos,Neg}, _V0Iso{Pos,Neg}, _primaryVertex{X,Y,Z}Unc,
+  //   _V0RBS(+Sig) — fill uses _RPV only; _V0Eta/_V0Phi mother;
+  //   daughter η/φ (_trackdR only); _V0D0*/_V0Dz* until trackingEff.
   // Float (/F) is enough for GeV / cm kinematics at analysis precision.
 
   outputTree->Branch("_beamSpotX", &_beamSpotX, "_beamSpotX/F");
@@ -59,31 +62,18 @@ void V0Analyzer::beginJob(TTree* outputTree) {
   outputTree->Branch("_V0Y", &_V0Y, "_V0Y[_nV0s]/F");
   outputTree->Branch("_V0Z", &_V0Z, "_V0Z[_nV0s]/F");
   outputTree->Branch("_V0RPV", &_V0RPV, "_V0RPV[_nV0s]/F");
-  outputTree->Branch("_V0RBS", &_V0RBS, "_V0RBS[_nV0s]/F");
   outputTree->Branch("_V0RPVSig", &_V0RPVSig, "_V0RPVSig[_nV0s]/F");
-  outputTree->Branch("_V0RBSSig", &_V0RBSSig, "_V0RBSSig[_nV0s]/F");
   outputTree->Branch("_V0Px", &_V0Px, "_V0Px[_nV0s]/F");
   outputTree->Branch("_V0Py", &_V0Py, "_V0Py[_nV0s]/F");
   outputTree->Branch("_V0Pt", &_V0Pt, "_V0Pt[_nV0s]/F");
-  outputTree->Branch("_V0Eta", &_V0Eta, "_V0Eta[_nV0s]/F");
-  outputTree->Branch("_V0Phi", &_V0Phi, "_V0Phi[_nV0s]/F");
   outputTree->Branch("_V0DCA", &_V0DCA, "_V0DCA[_nV0s]/F");
   outputTree->Branch("_V0VtxNormChi2", &_V0VtxNormChi2, "_V0VtxNormChi2[_nV0s]/F");
   outputTree->Branch("_V0PtPos", &_V0PtPos, "_V0PtPos[_nV0s]/F");
   outputTree->Branch("_V0PtNeg", &_V0PtNeg, "_V0PtNeg[_nV0s]/F");
-  outputTree->Branch("_V0EtaPos", &_V0EtaPos, "_V0EtaPos[_nV0s]/F");
-  outputTree->Branch("_V0EtaNeg", &_V0EtaNeg, "_V0EtaNeg[_nV0s]/F");
-  outputTree->Branch("_V0PhiPos", &_V0PhiPos, "_V0PhiPos[_nV0s]/F");
-  outputTree->Branch("_V0PhiNeg", &_V0PhiNeg, "_V0PhiNeg[_nV0s]/F");
   outputTree->Branch("_V0NHitsPos", &_V0NHitsPos, "_V0NHitsPos[_nV0s]/F");
   outputTree->Branch("_V0NHitsNeg", &_V0NHitsNeg, "_V0NHitsNeg[_nV0s]/F");
   outputTree->Branch("_V0NormChi2Pos", &_V0NormChi2Pos, "_V0NormChi2Pos[_nV0s]/F");
   outputTree->Branch("_V0NormChi2Neg", &_V0NormChi2Neg, "_V0NormChi2Neg[_nV0s]/F");
-  // Daughter IPs (dxy/dz w.r.t. PV) — keep for trackingEff nuisances (CDTE-26).
-  outputTree->Branch("_V0D0Pos", &_V0D0Pos, "_V0D0Pos[_nV0s]/F");
-  outputTree->Branch("_V0DzPos", &_V0DzPos, "_V0DzPos[_nV0s]/F");
-  outputTree->Branch("_V0D0Neg", &_V0D0Neg, "_V0D0Neg[_nV0s]/F");
-  outputTree->Branch("_V0DzNeg", &_V0DzNeg, "_V0DzNeg[_nV0s]/F");
 }
 
 void V0Analyzer::clear() {
@@ -183,30 +173,18 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
       _V0Y[_nV0s] = static_cast<float>(temp.at("vtxy"));
       _V0Z[_nV0s] = static_cast<float>(temp.at("vtxz"));
       _V0RPV[_nV0s] = static_cast<float>(temp.at("vtxr_pv"));
-      _V0RBS[_nV0s] = static_cast<float>(temp.at("vtxr_bs"));
       _V0RPVSig[_nV0s] = static_cast<float>(temp.at("vtxrsig_pv"));
-      _V0RBSSig[_nV0s] = static_cast<float>(temp.at("vtxrsig_bs"));
       _V0Px[_nV0s] = static_cast<float>(temp.at("px"));
       _V0Py[_nV0s] = static_cast<float>(temp.at("py"));
       _V0Pt[_nV0s] = static_cast<float>(temp.at("pt"));
-      _V0Eta[_nV0s] = static_cast<float>(temp.at("eta"));
-      _V0Phi[_nV0s] = static_cast<float>(temp.at("phi"));
       _V0DCA[_nV0s] = static_cast<float>(temp.at("dca"));
       _V0VtxNormChi2[_nV0s] = static_cast<float>(temp.at("vtxnormchi2"));
       _V0PtPos[_nV0s] = static_cast<float>(temp.at("ptpos"));
       _V0PtNeg[_nV0s] = static_cast<float>(temp.at("ptneg"));
-      _V0EtaPos[_nV0s] = static_cast<float>(temp.at("etapos"));
-      _V0EtaNeg[_nV0s] = static_cast<float>(temp.at("etaneg"));
-      _V0PhiPos[_nV0s] = static_cast<float>(temp.at("phipos"));
-      _V0PhiNeg[_nV0s] = static_cast<float>(temp.at("phineg"));
       _V0NHitsPos[_nV0s] = static_cast<float>(temp.at("nhitspos"));
       _V0NHitsNeg[_nV0s] = static_cast<float>(temp.at("nhitsneg"));
       _V0NormChi2Pos[_nV0s] = static_cast<float>(temp.at("normchi2pos"));
       _V0NormChi2Neg[_nV0s] = static_cast<float>(temp.at("normchi2neg"));
-      _V0D0Pos[_nV0s] = static_cast<float>(temp.at("d0pos"));
-      _V0DzPos[_nV0s] = static_cast<float>(temp.at("dzpos"));
-      _V0D0Neg[_nV0s] = static_cast<float>(temp.at("d0neg"));
-      _V0DzNeg[_nV0s] = static_cast<float>(temp.at("dzneg"));
 
       ++_nV0s;
       if (_nV0s == nV0s_max) break;

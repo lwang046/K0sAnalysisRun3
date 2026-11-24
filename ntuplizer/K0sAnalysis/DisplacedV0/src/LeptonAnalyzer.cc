@@ -8,8 +8,8 @@
  Upstream muon loop preselection + CutBasedIdMedium retained.
  Rochester / MVA / electron / tau paths omitted for lean DY+V0 package.
  Offline: exactly 2 medium, pT>30/25, |mμμ−mZ|<10 GeV (method §2.4).
- CDTE-30: drop loose/tight/isPF/isGlobal/isTracker/dxy/dz/sip3d/pfRelIso —
-   unused by v0builder DY selection; float kinematics.
+ CDTE-30: drop loose/tight/isPF/isGlobal/isTracker/dxy/dz/sip3d/pfRelIso.
+ CDTE-31: drop Muon_mass (v0builder uses PDG 0.105658 constant).
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/LeptonAnalyzer.h"
@@ -20,10 +20,6 @@
 
 #include <cmath>
 
-namespace {
-constexpr float kMuonMass = 0.1056583745f;
-}
-
 LeptonAnalyzer::LeptonAnalyzer(const edm::ParameterSet& /*iConfig*/, DisplacedV0Ntuple* ntuple)
     : ntuple_(ntuple) {}
 
@@ -32,7 +28,6 @@ void LeptonAnalyzer::beginJob(TTree* outputTree) {
   outputTree->Branch("Muon_pt", &_Muon_pt, "Muon_pt[nMuon]/F");
   outputTree->Branch("Muon_eta", &_Muon_eta, "Muon_eta[nMuon]/F");
   outputTree->Branch("Muon_phi", &_Muon_phi, "Muon_phi[nMuon]/F");
-  outputTree->Branch("Muon_mass", &_Muon_mass, "Muon_mass[nMuon]/F");
   outputTree->Branch("Muon_charge", &_Muon_charge, "Muon_charge[nMuon]/I");
   outputTree->Branch("Muon_mediumId", &_Muon_mediumId, "Muon_mediumId[nMuon]/O");
 }
@@ -57,7 +52,6 @@ void LeptonAnalyzer::analyze(const edm::Event& iEvent, const reco::Vertex& /*pri
     _Muon_pt[i] = static_cast<float>(mu.pt());
     _Muon_eta[i] = static_cast<float>(mu.eta());
     _Muon_phi[i] = static_cast<float>(mu.phi());
-    _Muon_mass[i] = kMuonMass;
     _Muon_charge[i] = mu.charge();
     _Muon_mediumId[i] = mu.passed(reco::Muon::CutBasedIdMedium);
 

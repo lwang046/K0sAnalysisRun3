@@ -75,6 +75,12 @@ private:
   bool isData_{true};
   /** If true: MagField from EventSetup. If false: UniformMagneticField(3.8 T). */
   bool useESMagneticField_{false};
+  /**
+   * If true (first-C default): skip tree_->Fill() when _nV0s==0 after the V0
+   * loop. Largest easy size win; trade-off: nimloth loses zero-Ks DY control
+   * events (laurelin is unaffected — first-C fill is laurelin-driven).
+   */
+  bool skipFillIfNoV0_{true};
 
   unsigned long long event_{0};
   unsigned int run_{0}, luminosityBlock_{0};

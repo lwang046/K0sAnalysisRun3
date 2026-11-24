@@ -17,8 +17,8 @@ fixture dry-run in §0).
 | First era | **Run2024D** | `samples/data_muon_2024.txt`, `conditions.md` |
 | Data DAS (PromptReco stub) | `/Muon{0,1}/Run2024D-PromptReco-v1/MINIAOD` | **TODO-VERIFY** on DAS |
 | MC DAS (FxFx stub) | `/DYto2L-2Jets_Bin-MLL-50_…/RunIII2024Summer24MiniAODv6-150X_…/MINIAODSIM` | **TODO-VERIFY** |
-| HLT (OR) | `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8` | `displacedV0_cfi.py` → `hltPaths`; tree: `passDimuonHLT`, `HLT_Mu17_…` |
-| DeepJet veto | loose WP placeholder **`0.0494`** on `Jet_btagDeepFlavB` | `v0builder.py --deepjet-loose-wp`; **TODO-VERIFY** BTV JSON |
+| HLT (OR) | `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8` | `displacedV0_cfi.py` → `hltPaths`; tree: `passDimuonHLT` |
+| DeepJet veto | loose WP placeholder **`0.0494`** → `passDeepJetLooseVeto` | `displacedV0_cfi deepJetLooseWP` / `v0builder` (legacy `Jet_*` fallback); **TODO-VERIFY** BTV JSON |
 | Δ2D bins [cm] | `0,1,2,3,5,7,11,16,22,30,40,60,90,120` | `analysis/config_ksvars.py` → laurelin `_RPV` |
 | Low-Δ2D norm \(\mathcal{N}\) | `[0, 2]` cm | `config_ksvars.py` `normrange`; `fitting/variables/variable_norm_rpv.json` |
 | Sideband mass | `_mass` in `[0.44, 0.56]` (31 bins) | `config_ksvars.py` `bkgsideband` |

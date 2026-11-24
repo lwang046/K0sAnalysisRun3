@@ -12,9 +12,11 @@ ERA_LABEL = "Run3 / 2024D"
 HLT_BASELINE = "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"
 HLT_BRANCH_PASS = "passDimuonHLT"
 
-# DeepJet loose WP placeholder (TODO-VERIFY on CVMFS BTV JSON)
+# DeepJet loose WP placeholder (TODO-VERIFY on CVMFS BTV JSON).
+# CDTE-31: DisplacedV0 stores passDeepJetLooseVeto (WP applied in JetAnalyzer);
+# keep DEEPJET_LOOSE_WP in sync with displacedV0_cfi deepJetLooseWP.
 DEEPJET_LOOSE_WP = 0.0494
-DEEPJET_BRANCH = "Jet_btagDeepFlavB"
+DEEPJET_BRANCH = "passDeepJetLooseVeto"  # was Jet_btagDeepFlavB pre–CDTE-31
 
 # Tree / branch names after v0building/v0builder.py
 TREE_KS = "laurelin"

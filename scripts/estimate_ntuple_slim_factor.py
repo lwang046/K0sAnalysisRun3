@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Estimate DisplacedV0 fat→slim ROOT size factor (no CMSSW).
+"""Estimate DisplacedV0 ntuple size factors (no CMSSW).
 
-Builds two synthetic ``displacedV0Ntuple/events`` trees with the same event /
-object multiplicities: a *fat* schema (pre–CDTE-30 doubles + Lambda + unused
-muon/jet leaves) and the *slim* first-C schema (Ks-only floats + kept branches).
+Builds synthetic ``displacedV0Ntuple/events`` trees with the same event /
+object multiplicities for three schemas:
+
+* *fat* — pre–CDTE-30 (doubles + Lambda + unused muon/jet leaves)
+* *slim14* — post–#14 / CDTE-30 (Ks-only floats + Jet_* arrays, all events)
+* *slim31* — CDTE-31 further slim (skip empty V0, jet scalars, deferred V0 leaves)
 
 Usage:
   python3 scripts/estimate_ntuple_slim_factor.py
@@ -36,7 +39,8 @@ def _write_tree(path: str, arrays: dict) -> int:
   return os.path.getsize(path)
 
 
-def build_arrays(n: int, slim: bool, seed: int = 2024):
+def build_arrays(n: int, schema: str, seed: int = 2024, empty_frac: float = 0.35):
+  """schema in {fat, slim14, slim31}."""
   rng = np.random.default_rng(seed)
   run = np.full(n, 380000, dtype=np.uint32)
   lumi = np.arange(1, n + 1, dtype=np.uint32)
@@ -47,7 +51,6 @@ def build_arrays(n: int, slim: bool, seed: int = 2024):
   passDimuonHLT = np.ones(n, dtype=bool)
   hlt = np.ones(n, dtype=bool)
 
-  # ~2 stored muons after preselection (DY-like)
   nMuon = np.full(n, 2, dtype=np.uint32)
   Muon_pt = rng.uniform(25, 60, size=(n, 2))
   Muon_eta = rng.uniform(-2.4, 2.4, size=(n, 2))
@@ -56,32 +59,49 @@ def build_arrays(n: int, slim: bool, seed: int = 2024):
   Muon_charge = np.column_stack([np.ones(n), -np.ones(n)]).astype(np.int32)
   Muon_mediumId = np.ones((n, 2), dtype=bool)
 
-  # ~8 jets above soft cut
   nJet = np.full(n, 8, dtype=np.uint32)
   Jet_pt = rng.uniform(15, 120, size=(n, 8))
   Jet_eta = rng.uniform(-4.5, 4.5, size=(n, 8))
   Jet_btag = rng.uniform(0, 0.2, size=(n, 8))
   Jet_jetId = np.full((n, 8), 6, dtype=np.int32)
+  # Selected-jet count matching JetAnalyzer (pT>30, |η|<2.5)
+  nJetSel = np.sum((Jet_pt > 30.0) & (np.abs(Jet_eta) < 2.5), axis=1).astype(np.uint32)
+  passDeepJetLooseVeto = np.ones(n, dtype=bool)
 
-  # Fat: mix of Ks + Lambda; slim: Ks only. Typical ~30% Lambda-like fraction.
-  if slim:
-    nV0 = rng.integers(1, 6, size=n).astype(np.uint32)  # Ks-only mean ~3
+  if schema == "fat":
+    nV0 = rng.integers(2, 9, size=n).astype(np.uint32)
+  elif schema == "slim14":
+    nV0 = rng.integers(1, 6, size=n).astype(np.uint32)
   else:
-    nV0 = rng.integers(2, 9, size=n).astype(np.uint32)  # fat mean ~5
+    # slim31: model empty fraction then drop those events (skipFillIfNoV0)
+    raw = rng.integers(0, 6, size=n).astype(np.uint32)
+    empty = rng.random(n) < empty_frac
+    raw[empty] = 0
+    keep = raw > 0
+    # Restrict arrays to kept events below
+    run, lumi, event = run[keep], lumi[keep], event[keep]
+    nPV, genWeight, Pileup_nTrue = nPV[keep], genWeight[keep], Pileup_nTrue[keep]
+    passDimuonHLT, hlt = passDimuonHLT[keep], hlt[keep]
+    nMuon = nMuon[keep]
+    Muon_pt, Muon_eta, Muon_phi = Muon_pt[keep], Muon_eta[keep], Muon_phi[keep]
+    Muon_mass, Muon_charge = Muon_mass[keep], Muon_charge[keep]
+    Muon_mediumId = Muon_mediumId[keep]
+    nJet, Jet_pt, Jet_eta = nJet[keep], Jet_pt[keep], Jet_eta[keep]
+    Jet_btag, Jet_jetId = Jet_btag[keep], Jet_jetId[keep]
+    nJetSel, passDeepJetLooseVeto = nJetSel[keep], passDeepJetLooseVeto[keep]
+    nV0 = raw[keep]
+    n = int(keep.sum())
+
   total = int(nV0.sum())
   v0type = np.ones(total, dtype=np.uint32)
-  if not slim:
-    # ~30% Lambda / LambdaBar
+  if schema == "fat":
     lam = rng.random(total) < 0.3
     v0type[lam] = rng.choice([2, 3], size=int(lam.sum()))
 
-  def f64(a):
-    return np.asarray(a, dtype=np.float64)
+  use_f32 = schema != "fat"
 
-  def f32(a):
-    return np.asarray(a, dtype=np.float32)
-
-  cast = f32 if slim else f64
+  def cast(a):
+    return np.asarray(a, dtype=np.float32 if use_f32 else np.float64)
 
   arrays = {
     "run": run,
@@ -91,19 +111,12 @@ def build_arrays(n: int, slim: bool, seed: int = 2024):
     "genWeight": genWeight,
     "Pileup_nTrue": Pileup_nTrue,
     "passDimuonHLT": passDimuonHLT,
-    "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8": hlt,
     "nMuon": nMuon,
     "Muon_pt": cast(Muon_pt),
     "Muon_eta": cast(Muon_eta),
     "Muon_phi": cast(Muon_phi),
-    "Muon_mass": cast(Muon_mass),
     "Muon_charge": Muon_charge,
     "Muon_mediumId": Muon_mediumId,
-    "nJet": nJet,
-    "Jet_pt": cast(Jet_pt),
-    "Jet_eta": cast(Jet_eta),
-    "Jet_btagDeepFlavB": cast(Jet_btag),
-    "Jet_jetId": Jet_jetId,
     "_nV0s": nV0,
     "_beamSpotX": cast(np.zeros(n)),
     "_beamSpotY": cast(np.zeros(n)),
@@ -113,8 +126,19 @@ def build_arrays(n: int, slim: bool, seed: int = 2024):
     "_primaryVertexZ": cast(np.zeros(n)),
   }
 
-  if not slim:
-    # Unused muon / jet leaves present in pre-slim ntuple
+  if schema != "slim31":
+    arrays["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"] = hlt
+    arrays["Muon_mass"] = cast(Muon_mass)
+    arrays["nJet"] = nJet
+    arrays["Jet_pt"] = cast(Jet_pt)
+    arrays["Jet_eta"] = cast(Jet_eta)
+    arrays["Jet_btagDeepFlavB"] = cast(Jet_btag)
+    arrays["Jet_jetId"] = Jet_jetId
+  else:
+    arrays["nJetSel"] = nJetSel
+    arrays["passDeepJetLooseVeto"] = passDeepJetLooseVeto
+
+  if schema == "fat":
     arrays["Muon_looseId"] = np.ones((n, 2), dtype=bool)
     arrays["Muon_tightId"] = np.zeros((n, 2), dtype=bool)
     arrays["Muon_isPF"] = np.ones((n, 2), dtype=bool)
@@ -131,7 +155,7 @@ def build_arrays(n: int, slim: bool, seed: int = 2024):
     arrays["_primaryVertexYUnc"] = cast(np.full(n, 0.001))
     arrays["_primaryVertexZUnc"] = cast(np.full(n, 0.01))
 
-  # Shared kept V0 branches
+  # Core V0 branches (all schemas)
   kept = {
     "_V0Type": v0type,
     "_V0InvMass": rng.normal(0.498, 0.01, size=total),
@@ -139,35 +163,40 @@ def build_arrays(n: int, slim: bool, seed: int = 2024):
     "_V0Y": rng.uniform(-20, 20, size=total),
     "_V0Z": rng.uniform(-50, 50, size=total),
     "_V0RPV": rng.uniform(0.2, 40, size=total),
-    "_V0RBS": rng.uniform(0.2, 40, size=total),
     "_V0RPVSig": rng.uniform(2, 80, size=total),
-    "_V0RBSSig": rng.uniform(2, 80, size=total),
     "_V0Px": rng.uniform(-5, 5, size=total),
     "_V0Py": rng.uniform(-5, 5, size=total),
     "_V0Pt": rng.uniform(1, 10, size=total),
-    "_V0Eta": rng.uniform(-2.5, 2.5, size=total),
-    "_V0Phi": rng.uniform(-np.pi, np.pi, size=total),
     "_V0DCA": rng.uniform(0, 0.5, size=total),
     "_V0VtxNormChi2": rng.uniform(0.5, 10, size=total),
     "_V0PtPos": rng.uniform(1, 6, size=total),
     "_V0PtNeg": rng.uniform(1, 6, size=total),
-    "_V0EtaPos": rng.uniform(-2.5, 2.5, size=total),
-    "_V0EtaNeg": rng.uniform(-2.5, 2.5, size=total),
-    "_V0PhiPos": rng.uniform(-np.pi, np.pi, size=total),
-    "_V0PhiNeg": rng.uniform(-np.pi, np.pi, size=total),
     "_V0NHitsPos": rng.integers(6, 25, size=total).astype(np.float64),
     "_V0NHitsNeg": rng.integers(6, 25, size=total).astype(np.float64),
     "_V0NormChi2Pos": rng.uniform(0.5, 5, size=total),
     "_V0NormChi2Neg": rng.uniform(0.5, 5, size=total),
-    "_V0D0Pos": rng.uniform(0.01, 1, size=total),
-    "_V0DzPos": rng.uniform(-2, 2, size=total),
-    "_V0D0Neg": rng.uniform(0.01, 1, size=total),
-    "_V0DzNeg": rng.uniform(-2, 2, size=total),
   }
+  if schema != "slim31":
+    kept.update(
+      {
+        "_V0RBS": rng.uniform(0.2, 40, size=total),
+        "_V0RBSSig": rng.uniform(2, 80, size=total),
+        "_V0Eta": rng.uniform(-2.5, 2.5, size=total),
+        "_V0Phi": rng.uniform(-np.pi, np.pi, size=total),
+        "_V0EtaPos": rng.uniform(-2.5, 2.5, size=total),
+        "_V0EtaNeg": rng.uniform(-2.5, 2.5, size=total),
+        "_V0PhiPos": rng.uniform(-np.pi, np.pi, size=total),
+        "_V0PhiNeg": rng.uniform(-np.pi, np.pi, size=total),
+        "_V0D0Pos": rng.uniform(0.01, 1, size=total),
+        "_V0DzPos": rng.uniform(-2, 2, size=total),
+        "_V0D0Neg": rng.uniform(0.01, 1, size=total),
+        "_V0DzNeg": rng.uniform(-2, 2, size=total),
+      }
+    )
   for k, v in kept.items():
     arrays[k] = _jagged(cast(v) if k != "_V0Type" else v, nV0)
 
-  if not slim:
+  if schema == "fat":
     dropped = {
       "_V0XUnc": rng.uniform(0.01, 0.1, size=total),
       "_V0YUnc": rng.uniform(0.01, 0.1, size=total),
@@ -190,7 +219,7 @@ def build_arrays(n: int, slim: bool, seed: int = 2024):
     for k, v in dropped.items():
       arrays[k] = _jagged(cast(v), nV0)
 
-  return arrays, int(nV0.sum()), float(nV0.mean())
+  return arrays, n, total, float(nV0.mean()) if n else 0.0
 
 
 def main():
@@ -198,6 +227,12 @@ def main():
   parser.add_argument("-n", "--nevents", type=int, default=2000)
   parser.add_argument("--out-dir", default="")
   parser.add_argument("--seed", type=int, default=2024)
+  parser.add_argument(
+    "--empty-frac",
+    type=float,
+    default=0.35,
+    help="Fraction of events with _nV0s==0 before skipFill (slim31 only)",
+  )
   args = parser.parse_args()
 
   try:
@@ -206,25 +241,38 @@ def main():
     raise SystemExit("uproot required") from exc
 
   out_dir = args.out_dir or tempfile.mkdtemp(prefix="ntuple_slim_")
-  fat_path = os.path.join(out_dir, "fat_schema.root")
-  slim_path = os.path.join(out_dir, "slim_schema.root")
+  paths = {}
+  stats = {}
+  for schema in ("fat", "slim14", "slim31"):
+    arr, n_kept, nv0, mean = build_arrays(
+      args.nevents, schema, seed=args.seed, empty_frac=args.empty_frac
+    )
+    path = os.path.join(out_dir, f"{schema}_schema.root")
+    nbytes = _write_tree(path, arr)
+    paths[schema] = path
+    stats[schema] = (nbytes, n_kept, nv0, mean)
 
-  fat_arr, fat_nv0, fat_mean = build_arrays(args.nevents, slim=False, seed=args.seed)
-  slim_arr, slim_nv0, slim_mean = build_arrays(args.nevents, slim=True, seed=args.seed)
-  fat_bytes = _write_tree(fat_path, fat_arr)
-  slim_bytes = _write_tree(slim_path, slim_arr)
-  factor = fat_bytes / slim_bytes if slim_bytes else float("inf")
+  fat_b, _, _, _ = stats["fat"]
+  s14_b, _, _, _ = stats["slim14"]
+  s31_b, n31, _, _ = stats["slim31"]
 
-  print(f"events: {args.nevents}")
-  print(f"fat:  {fat_path}")
-  print(f"      size={fat_bytes/1e6:.3f} MB  nV0={fat_nv0}  mean_nV0={fat_mean:.2f}")
-  print(f"slim: {slim_path}")
-  print(f"      size={slim_bytes/1e6:.3f} MB  nV0={slim_nv0}  mean_nV0={slim_mean:.2f}")
-  print(f"size factor (fat/slim): {factor:.2f}x")
+  print(f"input events (before skipFill): {args.nevents}")
+  for schema in ("fat", "slim14", "slim31"):
+    nbytes, n_kept, nv0, mean = stats[schema]
+    print(f"{schema}: {paths[schema]}")
+    print(
+      f"      size={nbytes/1e6:.3f} MB  events_written={n_kept}  "
+      f"nV0={nv0}  mean_nV0={mean:.2f}"
+    )
+  print(f"size factor fat/slim14 (#14):     {fat_b / s14_b:.2f}x")
+  print(f"size factor slim14/slim31 (CDTE-31): {s14_b / s31_b:.2f}x")
+  print(f"size factor fat/slim31 (overall): {fat_b / s31_b:.2f}x")
   print(
-    "Note: synthetic multiplicities (2μ, 8 jets, ~30% Λ in fat). "
-    "Real CRAB files also gain from ZIP/compression + fewer Λ rows; "
-    "resubmit full CRAB after merge — do not delete existing EOS output."
+    f"Note: slim31 models skipFillIfNoV0 with empty_frac={args.empty_frac} "
+    f"→ {n31}/{args.nevents} events kept. Synthetic multiplicities "
+    "(2μ, 8 jets, ~30% Λ in fat). Real CRAB files also gain from "
+    "ZIP/compression; resubmit full CRAB after merge — do not delete "
+    "existing EOS output."
   )
 
 

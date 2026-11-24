@@ -11,40 +11,43 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 
 ### Input (DisplacedV0 `displacedV0Ntuple/events` tree)
 
-First-C slim schema (`storeKsOnly=True`, float leaves). Kept vs dropped:
+First-C slim schema (`storeKsOnly=True`, `skipFillIfNoV0=True`, float leaves):
 
 | Branch | Use |
 | --- | --- |
-| `_V0InvMass`, `_V0Type`, `_V0RPV`/`_V0RBS` (+Sig), `_V0X/Y/Z`, `_V0Px/Py`, `_V0Pt/Eta/Phi`, `_V0DCA`, `_V0VtxNormChi2`, daughter pt/η/φ/hits/χ²/`_V0D0*`/`_V0Dz*` | Ks kinematics + AN §6 |
+| `_V0InvMass`, `_V0Type`, `_V0RPV` (+Sig), `_V0X/Y/Z`, `_V0Px/Py`, `_V0Pt`, `_V0DCA`, `_V0VtxNormChi2`, daughter pt/hits/χ² | Ks kinematics + AN §6 + C(Δ2D) |
 | `_beamSpot*`, `_primaryVertexX/Y/Z` | cosθ_pointing |
 | `passDimuonHLT` | Dimuon HLT OR |
-| `Muon_pt/eta/phi/charge/mediumId` (+ optional `Muon_mass`) | DY tag / celeborn |
-| `Jet_pt/eta`, `Jet_btagDeepFlavB`, `Jet_jetId` | DeepJet b-veto + nJets |
+| `Muon_pt/eta/phi/charge/mediumId` | DY tag / celeborn (`Muon_mass` optional / PDG offline) |
+| `passDeepJetLooseVeto`, `nJetSel` | DeepJet b-veto + nJets (Jet_* arrays dropped) |
 | `genWeight`, `Pileup_nTrue` | MC weights / PU (→ `_weight`, `_nTrueInt`) |
 | `run`, `luminosityBlock`, `event` | Event ID |
 
-**Dropped at source (unused by this path):** Λ/Λ̄ rows, `_V0*Unc`, `_V0PCA*`,
-`_V0Pz`, daughter Cartesian `_V0P{x,y,z}{Pos,Neg}`, `_V0Iso*`, PV unc,
-`Muon_{loose,tight}Id` / isPF/Global/Tracker / dxy/dz/sip3d / pfRelIso,
-`Jet_phi` / `Jet_mass` / `Jet_hadronFlavour`.
+**Dropped / deferred at source:** Λ/Λ̄ rows; empty-V0 events (`skipFillIfNoV0`);
+`_V0RBS*`; mother `_V0Eta/_V0Phi`; daughter η/φ (`_trackdR`); `_V0D0*`/`_V0Dz*`
+(until trackingEff); unc/PCA/Iso/PxPyPz; unused muon leaves; `Muon_mass`;
+per-path `HLT_*`; `Jet_*` / `nJet` arrays.
+
+Pre–CDTE-31 ntuples with `Jet_*` / `_V0RBS` / daughter ηφ still work
+(`v0builder` falls back).
 
 ### Output (analysis schema)
 
 `nimloth` / `celeborn` / `laurelin` / `telperion` with `_RPV`, `_mass`, `_weight`, …
 (`telperion` is empty when the ntuple was produced with `storeKsOnly=True`.)
 
-**Tracking nuisances (CDTE-26 / Sol):** laurelin/telperion keep each daughter's
-impact parameters (`_d0Pos`, `_dzPos`, `_d0Neg`, `_dzNeg` from DisplacedV0
-`_V0D0*` / `_V0Dz*`) and daughter–daughter `_trackdR`. Nearest charged-track
-distance in the matched jet is **not** computed yet (`_trkNearestJetDistPos/Neg`
-are NaN schema hooks — needs jet↔V0 matching upstream; do not invent values).
+**Tracking nuisances (CDTE-26 / Sol):** when DisplacedV0 still has
+`_V0D0*`/`_V0Dz*` and daughter η/φ, laurelin keeps `_d0*`/`_dz*` and
+`_trackdR`; otherwise those are omitted / NaN. Nearest charged-track distance
+in the matched jet is **not** computed yet (`_trkNearestJetDistPos/Neg` are
+NaN schema hooks).
 
 ### Usage
 
 ```bash
 python3 v0builder.py -i displacedv0_ntuple.root -o selected.root \
   --apply-dy-selection --selection legacy
-# DeepJet WP is a placeholder until BTV 2024 JSON is frozen:
+# DeepJet WP only matters for legacy Jet_* ntuples; CDTE-31 uses the scalar:
 #   --deepjet-loose-wp 0.0494   or  --no-bveto
 ```
 

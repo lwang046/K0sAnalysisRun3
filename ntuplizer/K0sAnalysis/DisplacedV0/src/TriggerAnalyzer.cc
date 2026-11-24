@@ -31,7 +31,8 @@ void TriggerAnalyzer::beginJob(TTree* outputTree) {
   for (const auto& name : triggersToSave_) {
     flag_[name] = false;
     index_[name] = -1;
-    outputTree->Branch(name.c_str(), &flag_[name], (name + "/O").c_str());
+    // CDTE-31: do not store per-path HLT_* leaves (duplicate of passDimuonHLT
+    // for the single-path first-C baseline). Paths still drive the OR.
   }
   // Logical OR of configured dimuon paths (AN Tab. 4 cocktail analogue)
   outputTree->Branch("passDimuonHLT", &passDimuonHLT_, "passDimuonHLT/O");
