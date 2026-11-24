@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-24 (Asia/Shanghai)  
 **Workers:** scaffold / prep / CRAB / VarParsing workers (prior); measurement handoff `bc-cb47e4bb-c55e-53fc-9150-ce025e1aaa6b`  
-**Outcome:** Package on GitHub `main` through **PR #4** (CRAB tighten) + **PR #5** (VarParsing `outputFile`). Offline §0 dry-run **passed** on this VM. First physics \(C(\Delta_{2D})\) blocked without CMS VO/CVMFS — lxplus runbook ready. HepTools untouched.
+**Outcome:** Package on GitHub `main` through **PR #4** (CRAB) + **PR #5** (VarParsing) + **PR #6** (lxplus runbook). Offline §0 dry-run **passed**. First physics \(C(\Delta_{2D})\) blocked without CMS VO/CVMFS — Long follows `docs/lxplus-first-c-runbook.md`. HepTools untouched.
 
 ---
 
@@ -28,9 +28,8 @@ Canonical docs:
 | Item | Status |
 | --- | --- |
 | Target GitHub | `https://github.com/lwang046/K0sAnalysisRun3` |
-| `main` tip (this turn) | `55743ff` — Fix VarParsing: do not re-register analysis outputFile (#5) |
-| Merged | [#2](https://github.com/lwang046/K0sAnalysisRun3/pull/2) prep · [#4](https://github.com/lwang046/K0sAnalysisRun3/pull/4) CRAB · [#5](https://github.com/lwang046/K0sAnalysisRun3/pull/5) VarParsing |
-| This handoff branch / PR | `cursor/lxplus-first-c-runbook-aa6b` — [#6](https://github.com/lwang046/K0sAnalysisRun3/pull/6) |
+| `main` tip | `5bc44a5` — Add lxplus first-C runbook and measurement status (#6) |
+| Merged | [#2](https://github.com/lwang046/K0sAnalysisRun3/pull/2) prep · [#4](https://github.com/lwang046/K0sAnalysisRun3/pull/4) CRAB · [#5](https://github.com/lwang046/K0sAnalysisRun3/pull/5) VarParsing · [#6](https://github.com/lwang046/K0sAnalysisRun3/pull/6) lxplus runbook |
 | HepTools | Untouched |
 
 ---
@@ -46,7 +45,7 @@ Canonical docs:
 | Offline fitting / analysis / v0building | Ported + **dry-run passed** | dummy ntuple → v0builder DY path (2026-11-24) |
 | First \(C(\Delta_{2D})\) recipe | Done (doc) | `docs/first-c-delta2d-recipe.md` |
 | **M4** CRAB configs | **Merged prep** | Production psets + smoke/full + `CRAB_STORAGE_SITE`; DAS/lumiMask **TODO-VERIFY**; **no crab submit** — #4 + #5 |
-| lxplus runbook | **Done (doc)** | `docs/lxplus-first-c-runbook.md` — DAS → SF export |
+| lxplus runbook | **Merged** | `docs/lxplus-first-c-runbook.md` — DAS → SF export ([#6](https://github.com/lwang046/K0sAnalysisRun3/pull/6)) |
 | First physics \(C(\Delta_{2D})\) | **Blocked** | Needs Long's lxplus session (DAS/brilcalc/cmsRun/CRAB/fit/fill) |
 
 ---
