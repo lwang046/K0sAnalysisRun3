@@ -11,18 +11,27 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 
 ### Input (DisplacedV0 `displacedV0Ntuple/events` tree)
 
+First-C slim schema (`storeKsOnly=True`, float leaves). Kept vs dropped:
+
 | Branch | Use |
 | --- | --- |
-| `_V0*` | Kalman V0 candidates (same names as upstream V0Analyzer) |
+| `_V0InvMass`, `_V0Type`, `_V0RPV`/`_V0RBS` (+Sig), `_V0X/Y/Z`, `_V0Px/Py`, `_V0Pt/Eta/Phi`, `_V0DCA`, `_V0VtxNormChi2`, daughter pt/η/φ/hits/χ²/`_V0D0*`/`_V0Dz*` | Ks kinematics + AN §6 |
+| `_beamSpot*`, `_primaryVertexX/Y/Z` | cosθ_pointing |
 | `passDimuonHLT` | Dimuon HLT OR |
-| `Muon_*` | DY tag (medium ID, \(p_T\), charge) |
-| `Jet_btagDeepFlavB` | Loose DeepJet \(b\)-veto |
-| `genWeight`, `Pileup_nTrue` | MC weights / PU (→ `_weight`, `_nTrueInt` in output) |
+| `Muon_pt/eta/phi/charge/mediumId` (+ optional `Muon_mass`) | DY tag / celeborn |
+| `Jet_pt/eta`, `Jet_btagDeepFlavB`, `Jet_jetId` | DeepJet b-veto + nJets |
+| `genWeight`, `Pileup_nTrue` | MC weights / PU (→ `_weight`, `_nTrueInt`) |
 | `run`, `luminosityBlock`, `event` | Event ID |
+
+**Dropped at source (unused by this path):** Λ/Λ̄ rows, `_V0*Unc`, `_V0PCA*`,
+`_V0Pz`, daughter Cartesian `_V0P{x,y,z}{Pos,Neg}`, `_V0Iso*`, PV unc,
+`Muon_{loose,tight}Id` / isPF/Global/Tracker / dxy/dz/sip3d / pfRelIso,
+`Jet_phi` / `Jet_mass` / `Jet_hadronFlavour`.
 
 ### Output (analysis schema)
 
 `nimloth` / `celeborn` / `laurelin` / `telperion` with `_RPV`, `_mass`, `_weight`, …
+(`telperion` is empty when the ntuple was produced with `storeKsOnly=True`.)
 
 **Tracking nuisances (CDTE-26 / Sol):** laurelin/telperion keep each daughter's
 impact parameters (`_d0Pos`, `_dzPos`, `_d0Neg`, `_dzNeg` from DisplacedV0
