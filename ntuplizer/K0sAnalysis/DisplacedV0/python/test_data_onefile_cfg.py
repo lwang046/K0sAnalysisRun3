@@ -31,7 +31,7 @@ options.register(
     False,
     VarParsing.multiplicity.singleton,
     VarParsing.varType.bool,
-    "Use IdealMagneticFieldRecord + TransientTrackBuilder instead of OAE 3_8T",
+    "Use IdealMagneticFieldRecord + TransientTrackBuilder instead of UniformMagneticField(3.8)",
 )
 options.register(
     "enableDimuonPreFilter",
@@ -59,7 +59,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, "auto:run3_data", "")
 
 # MagField / Geometry / TransientTrackBuilder:
-# Default (useESMagneticField=False): V0Analyzer builds OAE "3_8T" in C++ —
+# Default (useESMagneticField=False): UniformMagneticField(3.8 T) in C++ —
 # no MagField ES products required (see docs/cmsrun-smoke-test.md).
 # ES path: IdealMagneticFieldRecord + TransientTrackBuilder tokens.
 if options.useESMagneticField:
