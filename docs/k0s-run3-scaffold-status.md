@@ -44,7 +44,7 @@ Canonical docs:
 | **M3** DisplacedV0 | Analyzers + MagField hardening | `useESMagneticField` cfg/ES token; OAE default; smoke docs updated; **no cmsRun on VM** |
 | Offline fitting / analysis / v0building | Ported + dry-run | `count_jets` fix; dummy ntuple script; `config_defaults_run3.py` |
 | First \(C(\Delta_{2D})\) recipe | **Done (doc)** | `docs/first-c-delta2d-recipe.md` — scram → CRAB → v0building → fit → fill |
-| **M4** CRAB configs | **Prep tightened** | Production psets + Muon0/1 + smoke knobs; `storageSite` PLACEHOLDER / `CRAB_STORAGE_SITE`; DAS/lumiMask still **TODO-VERIFY**; **no crab submit** |
+| **M4** CRAB configs | **Prep tightened** | Production psets + Muon0/1 + smoke knobs; `storageSite` PLACEHOLDER / `CRAB_STORAGE_SITE`; DAS/lumiMask still **TODO-VERIFY**; **no crab submit** — [PR #4](https://github.com/lwang046/K0sAnalysisRun3/pull/4) |
 
 ---
 
