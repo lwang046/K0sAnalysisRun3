@@ -1,55 +1,55 @@
-# DY M(ℓℓ)>50 GeV @ 13.6 TeV MiniAODSIM — M2 freeze (best-effort without CMS VO)
-# Status: PdmV RunIII2024Summer24 naming. TODO-VERIFY every full string on DAS.
+# DY M(ℓℓ)>50 GeV @ 13.6 TeV MiniAODSIM — FROZEN after lxplus DAS search
+# (2026-11-24 Asia/Shanghai). See Project store internal/inclusive-dy-das-search.md.
 #
-# FIRST-ERA MATCHING MC: Summer24 MiniAODSIM with the GT series that matches
-# the chosen data MiniAOD campaign (140X_ → CMSSW_14_0_X; 150X_/MiniAODv6 → 15_0_X).
+# Data era match: Summer24 MiniAODv6 + 150X_ → CMSSW_15_0_22 / el9_amd64_gcc12.
 #
-# PdmV 2024 primary-dataset rules:
-#   PROCESS_[BINNING]_TUNE_BEAME_ME-PS
-#   Prefer DYto2L-2Jets + amcatnloFXFX (NLO FxFx) for AN-style DY reference.
+# STATUS:
+#   - Combined DYto2L Bin-MLL-50 Summer24 MiniAODv6: still **0 files** (do not use).
+#   - Production first-C: inclusive **DYto2Mu** Bin-MLL-50 …v2-v6 (no PTLL; μμ channel
+#     matches Muon0/1 PD). 13462 files, ~4.89e8 events; xrd + edmFileUtil OK.
+#   - PTLL-100 DYto2L …v2-v3: smoke-only (phase-space mismatch vs inclusive data).
+#
+# PdmV 2024: PROCESS_[BINNING]_TUNE_BEAME_ME-PS.
 # Ref: https://cms-pdmv.gitbook.io/project/mccontact/rules-for-run3-2024-dataset-names
 #
-# Discover / refresh:
+# Discover / refresh (lxplus + CMS VO):
 #   bash scripts/das_discover.sh
+#   dasgoclient -query='dataset=/DYto2Mu*MLL-50*amcatnloFXFX*/RunIII2024Summer24MiniAOD*/MINIAODSIM' | sort
 #   dasgoclient -query='dataset=/DYto2L*13p6TeV*amcatnloFXFX*/Run*2024*MiniAOD*/MINIAODSIM' | sort
 
 # ===========================================================================
-# PREFERRED (first C): inclusive FxFx MLL>50 — TODO-VERIFY full string on DAS
+# FROZEN PRODUCTION (first C) — inclusive DYto2Mu MLL>50 MiniAODv6 …v2-v6
 # ===========================================================================
-# PdmV-compliant primary dataset (BINNING block uses Bin- header):
-/DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
+# No gen-level PTLL cut; matches inclusive Run2024D + v0builder dy_event_mask.
+# Combined DYto2L Bin-MLL-50 Summer24 unavailable (0 files); only PTLL-binned
+# DYto2L has files — those stay smoke/extension only (Codex P1).
+# Example LFN (xrd OK):
+#   /store/mc/RunIII2024Summer24MiniAODv6/DYto2Mu-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/MINIAODSIM/150X_mcRun3_2024_realistic_v2-v6/90001/1e7e454d-508f-4310-92a9-146dffb86e5a.root
+/DYto2Mu-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v6/MINIAODSIM
 
-# Alternate primary spelling seen in some McM / analysis notes (no "Bin-" or no "-2Jets"):
-# TODO-VERIFY which spelling exists for Summer24:
+# ===========================================================================
+# SMOKE-ONLY — DYto2L Bin-MLL-50-PTLL-100 (populated MiniAODv6 …v2-v3)
+# ===========================================================================
+# crab_common.MC_DAS_DY_SMOKE / crab_mc_dy_smoke.py / M3 cmsRun only.
+# Gen pT(ℓℓ)>100 ≠ inclusive data — do NOT promote to MC_DAS_DY for first-C.
+# Example LFN:
+#   /store/mc/RunIII2024Summer24MiniAODv6/DYto2L-2Jets_Bin-MLL-50-PTLL-100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/MINIAODSIM/150X_mcRun3_2024_realistic_v2-v3/2820000/4b2bbedd-7901-45eb-a7ae-ed03d354e655.root
+/DYto2L-2Jets_Bin-MLL-50-PTLL-100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v3/MINIAODSIM
+
+# ===========================================================================
+# DO NOT USE — combined DYto2L inclusive Summer24 (empty in DAS)
+# ===========================================================================
+# Verified 2026-11-24: nfiles=0 / nevents=0 for all of:
+# /DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
 # /DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
 # /DYto2L-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
 
-# Earlier MiniAOD campaign (if MiniAODv6 unavailable / mismatched to PromptReco GT):
-# TODO-VERIFY:
-# /DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv4-140X_mcRun3_2024_realistic_v26-v*/MINIAODSIM
-# /DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer24MiniAODv4-140X_mcRun3_2024_realistic_v26-v*/MINIAODSIM
+# Electron-channel twin (if needed later; not first-C default):
+# /DYto2E-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v4/MINIAODSIM
 
-# ===========================================================================
-# Fallback / diagnostic (LO MLM or POWHEG) — only if FxFx missing for campaign
-# Document choice in conditions.md; do not mix into the same C without a sys.
-# Confirmed public MiniAODv6 examples (HSCP / CMS analyses):
-# ===========================================================================
-# TODO-VERIFY:
-# /DYto2L-4Jets_Bin-HT-100to400-MLL-50to120_TuneCP5_13p6TeV_madgraphMLM-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
-# /DYto2Mu_Bin-MLL-50to120_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM
-
-# ===========================================================================
-# Legacy primary-dataset spelling (pre-PdmV-2024) — query only
-# ===========================================================================
-# TODO-VERIFY (often empty under RunIII2024Summer24):
-# /DYJetsToLL_M-50_TuneCP5_13p6TeV-amcatnloFXFX-pythia8/RunIII2024Summer24MiniAOD*/MINIAODSIM
-# /DYJetsToLL_M-50_TuneCP5_13p6TeV-amcatnloFXFX-pythia8/Run3Summer24MiniAOD*/MINIAODSIM
-
-# Cross section: XSDB / genXsecAnalyzer for M_ℓℓ>50 GeV @ 13.6 TeV
-# (do not reuse Run 2 6077.22 pb). Record in conditions.md when frozen.
+# Cross section: XSDB / genXsecAnalyzer for **DYto2Mu** MLL>50 @ 13.6 TeV.
+# Do not reuse Run 2 6077.22 pb. Record in conditions.md when measured.
 #
-# Match CMSSW to 140X_ / 150X_ token in the chosen processed dataset
-# (plan §2.1): MiniAODv6 + 150X_ → CMSSW_15_0_X; 140X_ → CMSSW_14_0_X.
-#
-# CRAB: crab_mc_dy.py (full) / crab_mc_dy_smoke.py (few files); builders in crab_common.py.
-#       export CRAB_STORAGE_SITE=<your T2> on lxplus (T2_XX_PLACEHOLDER otherwise).
+# CRAB: crab_mc_dy.py → MC_DAS_DY (DYto2Mu production);
+#       crab_mc_dy_smoke.py → MC_DAS_DY_SMOKE (PTLL-100).
+#       export CRAB_STORAGE_SITE=<your T2> on lxplus — never invent a T2 in git.

@@ -1,17 +1,9 @@
-# 2024 Muon MiniAOD — M2 freeze (best-effort without CMS VO / dasgoclient)
-# Status: realistic PromptReco + MiniAODv6 parent patterns from published 2024
-# NanoAOD campaign records (uhh-cms/cmsdb run3_2024_nano_v15) and PdmV naming.
-# Lines marked TODO-VERIFY need live dasgoclient confirmation before CRAB.
-# Prefer MiniAOD (not NanoAOD) so packedPFCandidates + lostTracks remain available.
+# 2024 Muon MiniAOD — FROZEN after lxplus M3 smoke (2026-11-24 Asia/Shanghai)
+# Verified: VOMS proxy + dasgoclient + 200-evt cmsRun on cms-xrd-global (see
+# Project store internal/lxplus-smoke-cdte15.md). Prefer MiniAOD (not NanoAOD)
+# so packedPFCandidates + lostTracks remain available.
 #
 # FIRST ERA FOR FIRST C(Δ2D): Run2024D
-#   Rationale: early–mid 2024; well covered by Collisions24 golden JSON;
-#   NanoAOD parents exist as /Muon{0,1}/Run2024D-MINIv6NANOv15-v1/NANOAOD
-#   (cmsdb: prompt=False → MiniAOD parent is central MiniAODv6, not PromptReco).
-#   For a PromptReco-first path (plan §8 default for speed), use Run2024D
-#   PromptReco MiniAOD below if still on DAS; else fall back to MiniAODv6 parent.
-#   Alternate early era: Run2024C (same scheme). Mid-year large-lumi: Run2024F/G.
-#
 # Run 3 PDs: Muon0 / Muon1. DoubleMuon is legacy (likely empty for 2024).
 #
 # Discover / refresh (lxplus + CMS VO):
@@ -19,21 +11,20 @@
 #   dasgoclient -query='dataset=/Muon*/Run2024D*/MINIAOD' | sort
 
 # ===========================================================================
-# FIRST ERA (frozen choice): Run2024D — Muon0 + Muon1
+# FIRST ERA (FROZEN): Run2024D — Muon0 + Muon1 PromptReco-v1
 # ===========================================================================
-# PromptReco MiniAOD (preferred for first C if still published):
-# TODO-VERIFY v-number / existence on DAS:
+# DAS: PromptReco-v1 exists (Muon0: 1978 files). Example LFN readable via
+# root://cms-xrd-global.cern.ch/ → T1_DE_KIT:
+#   /store/data/Run2024D/Muon0/MINIAOD/PromptReco-v1/000/380/346/00000/b4cfb360-cb78-4d86-9b2f-89727ad5db4f.root
+# 200-evt cmsRun smoke: exit 0; Ks mass mean ≈0.501.
 /Muon0/Run2024D-PromptReco-v1/MINIAOD
 /Muon1/Run2024D-PromptReco-v1/MINIAOD
 
 # MiniAODv6 central reprocessing parent of published NanoAOD
-# /Muon{0,1}/Run2024D-MINIv6NANOv15-v1/NANOAOD  (cmsdb campaign run3_2024_nano_v15).
-# Exact MiniAOD processed-dataset string MUST be resolved with:
-#   dasgoclient -query='dataset=/Muon0/Run2024D*MiniAOD*/MINIAOD'
+# /Muon{0,1}/Run2024D-MINIv6NANOv15-v1/NANOAOD — fallback if PromptReco gone.
+# Also on DAS: MINIv6NANOv15-v1, 2024CDEReprocessing-v1 (not used for first C).
+# Resolve parent with:
 #   dasgoclient -query='parent dataset=/Muon0/Run2024D-MINIv6NANOv15-v1/NANOAOD'
-# TODO-VERIFY (illustrative shape only):
-# /Muon0/Run2024D-*-MiniAODv6*-v*/MINIAOD
-# /Muon1/Run2024D-*-MiniAODv6*-v*/MINIAOD
 
 # ===========================================================================
 # Other PromptReco eras (same pattern; freeze after first-era C)
@@ -64,5 +55,5 @@
 
 # CRAB: crab_data_2024.py (Muon0) + crab_data_2024_muon1.py (Muon1 twin);
 #       smoke: crab_data_2024_smoke.py. Shared builders: crab_common.py.
-#       Set export CRAB_STORAGE_SITE=<your T2> on lxplus (T2_XX_PLACEHOLDER otherwise).
+#       Set export CRAB_STORAGE_SITE=<your T2> on lxplus — never invent a T2 in git.
 # Lumi mask: samples/cert/ → Cert_Collisions2024_378981_386951_Golden.json

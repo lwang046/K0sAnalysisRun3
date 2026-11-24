@@ -1,6 +1,7 @@
-"""CRAB3 smoke — Summer24 DY, few files (unitsPerJob=1, totalUnits=2).
+"""CRAB3 smoke — Summer24 DY PTLL-100 (MC_DAS_DY_SMOKE), few files.
 
-Use this before the full ``crab_mc_dy.py`` submit.
+Pipeline / plumbing only — gen pT(ℓℓ)>100 ≠ inclusive data. Not for first-C physics.
+Full production: ``crab_mc_dy.py`` (inclusive MC_DAS_DY after TODO-VERIFY files).
 
   export CRAB_STORAGE_SITE=<your writeable T2>
   crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy_smoke.py
