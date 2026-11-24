@@ -23,12 +23,13 @@ Ordered first-era commands: [`docs/first-c-delta2d-recipe.md`](../docs/first-c-d
 
 | Tree | Key branches |
 | --- | --- |
-| `laurelin` | `_RPV`, `_mass`, `_pt`, `_weight`, `_nTrueInt`, `_d0Pos/Neg`, `_dzPos/Neg`, `_trackdR` |
-| `nimloth` | `_nimloth_Mll`, `_nimloth_nJets`, … |
+| `laurelin` | `_RPV`, `_mass`, `_pt`, `_weight`, `_nTrueInt` (+ optional `_d0*`/`_dz*`/`_trackdR` when present upstream) |
+| `nimloth` | `_nimloth_Mll`, `_nimloth_nJets`, … (zero-Ks DY controls absent if `skipFillIfNoV0`) |
 | `celeborn` | `_celeborn_lPt`, `_celeborn_lEta`, … |
 
 `_weight` / `_nTrueInt` are mapped from DisplacedV0 `genWeight` / `Pileup_nTrue`.
-Daughter IPs (`_d0*`/`_dz*`) come from DisplacedV0 `_V0D0*`/`_V0Dz*` (CDTE-26).
+Daughter IPs (`_d0*`/`_dz*`) come from DisplacedV0 `_V0D0*`/`_V0Dz*` when stored
+(CDTE-26 / trackingEff); CDTE-31 defers those leaves for first-C size.
 `_trkNearestJetDistPos/Neg` are NaN schema hooks until jet↔V0 matching exists.
 
 Default: `--nopileup` until Collisions24 PU profiles are under `reweighting/pileup/`.

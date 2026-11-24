@@ -1,6 +1,6 @@
 # DY control plots (AN Fig. 5 style) for Run3.
 # Branches filled by adapted v0building/v0builder.py from DisplacedV0
-# Muon_* / Jet_* / passDimuonHLT selection.
+# Muon_* / passDeepJetLooseVeto (or legacy Jet_*) / passDimuonHLT selection.
 
 import numpy as np
 

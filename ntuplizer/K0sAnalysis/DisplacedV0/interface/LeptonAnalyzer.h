@@ -7,8 +7,8 @@
 
  Run3 / K0sAnalysisRun3 adaptations:
    - Owner: DisplacedV0Ntuple* (was multilep*)
-   - CDTE-30 slim: only branches used by v0builder --apply-dy-selection /
-     celeborn (pt/eta/phi/charge/mediumId/mass); float kinematics
+   - CDTE-30/31 slim: branches used by v0builder --apply-dy-selection /
+     celeborn (pt/eta/phi/charge/mediumId); Muon_mass dropped (const offline)
 */
 #ifndef DisplacedV0_LeptonAnalyzer_h
 #define DisplacedV0_LeptonAnalyzer_h
@@ -27,7 +27,6 @@ private:
   float _Muon_pt[nMuon_max]{};
   float _Muon_eta[nMuon_max]{};
   float _Muon_phi[nMuon_max]{};
-  float _Muon_mass[nMuon_max]{};
   int _Muon_charge[nMuon_max]{};
   bool _Muon_mediumId[nMuon_max]{};
   DisplacedV0Ntuple* ntuple_{nullptr};

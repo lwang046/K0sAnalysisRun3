@@ -6,6 +6,9 @@
  genWeight / Pileup_nTrue: small hooks from upstream LheAnalyzer path
  (GenEventInfoProduct::weight + PileupSummaryInfo::getTrueNumInteractions).
  Full LHE/PS weight histograms still deferred.
+
+ CDTE-31: optional skipFillIfNoV0 (default true) — do not Fill when _nV0s==0.
+ Trade-off: lose zero-Ks DY control rows in nimloth; Path dimuon filter kept.
 */
 #include "K0sAnalysis/DisplacedV0/interface/DisplacedV0Ntuple.h"
 #include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
@@ -19,7 +22,10 @@
 
 DisplacedV0Ntuple::DisplacedV0Ntuple(const edm::ParameterSet& iConfig)
     : isData_(iConfig.getParameter<bool>("isData")),
-      useESMagneticField_(iConfig.getParameter<bool>("useESMagneticField")) {
+      useESMagneticField_(iConfig.getParameter<bool>("useESMagneticField")),
+      skipFillIfNoV0_(iConfig.existsAs<bool>("skipFillIfNoV0")
+                          ? iConfig.getParameter<bool>("skipFillIfNoV0")
+                          : true) {
   usesResource("TFileService");
 
   muonToken = consumes<std::vector<pat::Muon>>(iConfig.getParameter<edm::InputTag>("muons"));
@@ -108,6 +114,12 @@ void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup&
   } else {
     // Avoid carrying previous-event V0/PV branches into Fill()
     v0Analyzer_->clear();
+  }
+
+  // First-C size: skip empty-V0 events (laurelin needs ≥1 Ks). Set
+  // skipFillIfNoV0=False to keep zero-Ks DY controls in nimloth.
+  if (skipFillIfNoV0_ && v0Analyzer_->_nV0s == 0) {
+    return;
   }
 
   tree_->Fill();

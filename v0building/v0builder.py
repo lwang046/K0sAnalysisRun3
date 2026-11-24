@@ -87,27 +87,34 @@ def dy_event_mask(branches, deepjet_wp: float | None):
   mass_ok = ak.to_numpy(np.abs(mll - MZ) < 10.0)
   mask = mask & opp & mass_ok
 
-  # loose DeepJet b-veto (Jet_btagDeepFlavB); WP TBD → placeholder
-  if deepjet_wp is not None and "Jet_btagDeepFlavB" in branches.fields:
-    jpt = branches["Jet_pt"]
-    jeta = branches["Jet_eta"]
-    jbtag = branches["Jet_btagDeepFlavB"]
-    jet_sel = (jpt > 30.0) & (np.abs(jeta) < 2.5) & (jbtag > deepjet_wp)
-    if "Jet_jetId" in branches.fields:
-      jet_sel = jet_sel & (branches["Jet_jetId"] >= 2)
-    has_btag = ak.to_numpy(ak.any(jet_sel, axis=1))
-    mask = mask & (~has_btag)
+  # loose DeepJet b-veto: prefer CDTE-31 scalar passDeepJetLooseVeto; fall back
+  # to Jet_* arrays (pre–CDTE-31 ntuples). WP TBD → placeholder when arrays used.
+  if deepjet_wp is not None:
+    if "passDeepJetLooseVeto" in branches.fields:
+      mask = mask & ak.to_numpy(branches["passDeepJetLooseVeto"])
+    elif "Jet_btagDeepFlavB" in branches.fields:
+      jpt = branches["Jet_pt"]
+      jeta = branches["Jet_eta"]
+      jbtag = branches["Jet_btagDeepFlavB"]
+      jet_sel = (jpt > 30.0) & (np.abs(jeta) < 2.5) & (jbtag > deepjet_wp)
+      if "Jet_jetId" in branches.fields:
+        jet_sel = jet_sel & (branches["Jet_jetId"] >= 2)
+      has_btag = ak.to_numpy(ak.any(jet_sel, axis=1))
+      mask = mask & (~has_btag)
 
   return mask, mll
 
 
 def count_jets(branches):
-  # Count selected jets per event. Prefer ak.sum on the boolean mask so we do
-  # not flatten RegularArray / 2D Jet_* branches (ak.num(jpt[mask], axis=1)
-  # fails once boolean indexing collapses the jet axis).
+  # Prefer CDTE-31 nJetSel scalar; else count from Jet_* arrays (legacy).
+  if "nJetSel" in branches.fields:
+    return ak.values_astype(branches["nJetSel"], np.int32)
   if "nJet" not in branches.fields:
     ref = branches["run"] if "run" in branches.fields else branches["_runNb"]
     return ak.zeros_like(ref)
+  # Prefer ak.sum on the boolean mask so we do not flatten RegularArray / 2D
+  # Jet_* branches (ak.num(jpt[mask], axis=1) fails once boolean indexing
+  # collapses the jet axis).
   jpt = branches["Jet_pt"]
   jeta = branches["Jet_eta"]
   jet_sel = (jpt > 30.0) & (np.abs(jeta) < 2.5)
@@ -285,23 +292,32 @@ if __name__ == "__main__":
   cospointingBS = cospointing(branches, reference="beamSpot")
   ptSum = branches["_V0PtPos"] + branches["_V0PtNeg"]
 
-  posp4 = vector.zip(
-    {
-      "pt": branches["_V0PtPos"],
-      "eta": branches["_V0EtaPos"],
-      "phi": branches["_V0PhiPos"],
-      "mass": 0.0,
-    }
+  # Daughter η/φ dropped in CDTE-31 (needed only for _trackdR). Compute when
+  # present; otherwise fill NaN schema hooks in laurelin.
+  has_daughter_angles = all(
+    k in branches.fields
+    for k in ("_V0EtaPos", "_V0EtaNeg", "_V0PhiPos", "_V0PhiNeg")
   )
-  negp4 = vector.zip(
-    {
-      "pt": branches["_V0PtNeg"],
-      "eta": branches["_V0EtaNeg"],
-      "phi": branches["_V0PhiNeg"],
-      "mass": 0.0,
-    }
-  )
-  trackdR = posp4.deltaR(negp4)
+  if has_daughter_angles:
+    posp4 = vector.zip(
+      {
+        "pt": branches["_V0PtPos"],
+        "eta": branches["_V0EtaPos"],
+        "phi": branches["_V0PhiPos"],
+        "mass": 0.0,
+      }
+    )
+    negp4 = vector.zip(
+      {
+        "pt": branches["_V0PtNeg"],
+        "eta": branches["_V0EtaNeg"],
+        "phi": branches["_V0PhiNeg"],
+        "mass": 0.0,
+      }
+    )
+    trackdR = posp4.deltaR(negp4)
+  else:
+    trackdR = None
 
   print("Performing selections")
   extra = {"cospointingPV": cospointingPV, "cospointingBS": cospointingBS}
@@ -363,22 +379,31 @@ if __name__ == "__main__":
     out["_vertexY"] = ak.flatten(branches["_V0Y"][mask])
     out["_vertexZ"] = ak.flatten(branches["_V0Z"][mask])
     out["_RPV"] = ak.flatten(branches["_V0RPV"][mask])
-    out["_RBS"] = ak.flatten(branches["_V0RBS"][mask])
+    if "_V0RBS" in branches.fields:
+      out["_RBS"] = ak.flatten(branches["_V0RBS"][mask])
     out["_RPVSig"] = ak.flatten(branches["_V0" + rpvsigkey][mask])
-    out["_RBSSig"] = ak.flatten(branches["_V0" + rbssigkey][mask])
+    if "_V0" + rbssigkey in branches.fields:
+      out["_RBSSig"] = ak.flatten(branches["_V0" + rbssigkey][mask])
     out["_pt"] = ak.flatten(branches["_V0Pt"][mask])
     out["_ptSum"] = ak.flatten(ptSum[mask])
-    out["_eta"] = ak.flatten(branches["_V0Eta"][mask])
-    out["_phi"] = ak.flatten(branches["_V0Phi"][mask])
+    if "_V0Eta" in branches.fields:
+      out["_eta"] = ak.flatten(branches["_V0Eta"][mask])
+    if "_V0Phi" in branches.fields:
+      out["_phi"] = ak.flatten(branches["_V0Phi"][mask])
     out["_nHitsPos"] = ak.flatten(branches["_V0NHitsPos"][mask])
     out["_nHitsNeg"] = ak.flatten(branches["_V0NHitsNeg"][mask])
     out["_ptPos"] = ak.flatten(branches["_V0PtPos"][mask])
     out["_ptNeg"] = ak.flatten(branches["_V0PtNeg"][mask])
     out["_normChi2Pos"] = ak.flatten(branches["_V0NormChi2Pos"][mask])
     out["_normChi2Neg"] = ak.flatten(branches["_V0NormChi2Neg"][mask])
-    # Daughter–daughter separation (kept) + each daughter's IP (CDTE-26 / trackingEff).
-    # DisplacedV0 already stores _V0D0{Pos,Neg} / _V0Dz{Pos,Neg}; do not drop them.
-    out["_trackdR"] = ak.flatten(trackdR[mask])
+    # Daughter–daughter ΔR + IPs: optional (CDTE-31 drops η/φ and D0/Dz at
+    # source until trackingEff). Keep NaN schema hooks when absent.
+    flat_ones = ak.flatten(branches["_V0Pt"][mask] > -1.0)
+    nan_hook = ak.full_like(ak.values_astype(flat_ones, np.float64), np.nan)
+    if trackdR is not None:
+      out["_trackdR"] = ak.flatten(trackdR[mask])
+    else:
+      out["_trackdR"] = nan_hook
     if "_V0D0Pos" in branches.fields:
       out["_d0Pos"] = ak.flatten(branches["_V0D0Pos"][mask])
       out["_dzPos"] = ak.flatten(branches["_V0DzPos"][mask])
@@ -391,8 +416,6 @@ if __name__ == "__main__":
     # (trackingEff nuisance). Not computed yet: needs jet↔V0 matching that
     # JetAnalyzer does not provide. Fill NaN — do not invent physics values.
     # TODO(CDTE-26): implement after jet-track association lands in DisplacedV0.
-    flat_ones = ak.flatten(branches["_V0Pt"][mask] > -1.0)
-    nan_hook = ak.full_like(ak.values_astype(flat_ones, np.float64), np.nan)
     out["_trkNearestJetDistPos"] = nan_hook
     out["_trkNearestJetDistNeg"] = nan_hook
     ones = branches["_V0Pt"][mask] > -1.0

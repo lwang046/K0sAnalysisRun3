@@ -11,8 +11,9 @@
    - MagField: default UniformMagneticField(3.8 T) smoke fallback; optional ES
      IdealMagneticFieldRecord + TransientTrackBuilder/TransientTrackRecord
      via DisplacedV0Ntuple::useESMagneticField_
-   - First-C slim (CDTE-30): storeKsOnly + float kinematics; drop unc/PCA/
-     daughter PxPyPz / Iso / PV-unc branches unused by v0builder
+   - First-C slim (CDTE-30/31): storeKsOnly + float kinematics; drop unc/PCA/
+     daughter PxPyPz / Iso / PV-unc; defer RBS / mother ηφ / daughter ηφ /
+     D0Dz (trackingEff) until needed offline
  Physics / Kalman logic matches upstream; AN-20-111 §6 tight cuts remain in
  offline v0building/v0selections.py.
 */
@@ -102,30 +103,18 @@ private:
   float _V0Y[nV0s_max]{};
   float _V0Z[nV0s_max]{};
   float _V0RPV[nV0s_max]{};
-  float _V0RBS[nV0s_max]{};
   float _V0RPVSig[nV0s_max]{};
-  float _V0RBSSig[nV0s_max]{};
   float _V0Px[nV0s_max]{};
   float _V0Py[nV0s_max]{};
   float _V0Pt[nV0s_max]{};
-  float _V0Eta[nV0s_max]{};
-  float _V0Phi[nV0s_max]{};
   float _V0DCA[nV0s_max]{};
   float _V0VtxNormChi2[nV0s_max]{};
   float _V0PtPos[nV0s_max]{};
   float _V0PtNeg[nV0s_max]{};
-  float _V0EtaPos[nV0s_max]{};
-  float _V0EtaNeg[nV0s_max]{};
-  float _V0PhiPos[nV0s_max]{};
-  float _V0PhiNeg[nV0s_max]{};
   float _V0NHitsPos[nV0s_max]{};
   float _V0NHitsNeg[nV0s_max]{};
   float _V0NormChi2Pos[nV0s_max]{};
   float _V0NormChi2Neg[nV0s_max]{};
-  float _V0D0Pos[nV0s_max]{};
-  float _V0DzPos[nV0s_max]{};
-  float _V0D0Neg[nV0s_max]{};
-  float _V0DzNeg[nV0s_max]{};
 
   unsigned debugcounter = 0;
 
