@@ -33,6 +33,6 @@ Daughter IPs (`_d0*`/`_dz*`) come from DisplacedV0 `_V0D0*`/`_V0Dz*` (CDTE-26).
 
 Default: `--nopileup` until Collisions24 PU profiles are under `reweighting/pileup/`.
 Use `--normmode range` with `fitting/variables/variable_norm_rpv.json` (or config `normrange`) for AN low-\(\Delta_{2D}\) normalization.
-Shared scale + correlated envelope: output `norm_scale`, `norm_shared_up/down`.
+Shared scale + correlated envelope: output `norm_scale`, `normshared_up/down`.
 Stability knob: `--norm-stability-uppers 1.0,3.0`. Peak window: `--peak-halfwidth-frac 0.25`.
 
