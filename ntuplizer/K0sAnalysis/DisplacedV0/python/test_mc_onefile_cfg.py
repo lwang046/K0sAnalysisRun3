@@ -28,7 +28,7 @@ options.register(
     False,
     VarParsing.multiplicity.singleton,
     VarParsing.varType.bool,
-    "Use IdealMagneticFieldRecord + TransientTrackBuilder instead of OAE 3_8T",
+    "Use IdealMagneticFieldRecord + TransientTrackBuilder instead of UniformMagneticField(3.8)",
 )
 options.register(
     "enableDimuonPreFilter",

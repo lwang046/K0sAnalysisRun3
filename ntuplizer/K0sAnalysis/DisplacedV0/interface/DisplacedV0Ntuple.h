@@ -73,7 +73,7 @@ public:
 private:
   TTree* tree_{nullptr};
   bool isData_{true};
-  /** If true: MagField from EventSetup. If false: OAEParametrizedMagneticField("3_8T"). */
+  /** If true: MagField from EventSetup. If false: UniformMagneticField(3.8 T). */
   bool useESMagneticField_{false};
 
   unsigned long long event_{0};

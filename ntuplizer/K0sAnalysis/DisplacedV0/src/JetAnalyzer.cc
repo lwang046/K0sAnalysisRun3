@@ -11,7 +11,7 @@
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/JetAnalyzer.h"
-#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/DisplacedV0Ntuple.h"
 
 #include <cmath>
 

@@ -8,7 +8,7 @@
  Adapted for K0sAnalysisRun3 slim package:
    - friend/owner class: DisplacedV0Ntuple (was multilep)
    - include paths: K0sAnalysis/DisplacedV0/... (scram Subsystem/Package)
-   - MagField: default OAEParametrizedMagneticField("3_8T"); optional ES
+   - MagField: default UniformMagneticField(3.8 T) smoke fallback; optional ES
      IdealMagneticFieldRecord + TransientTrackBuilder/TransientTrackRecord
      via DisplacedV0Ntuple::useESMagneticField_
  Physics / Kalman logic and ntuple branches match upstream.
@@ -18,9 +18,6 @@
 */
 #ifndef DisplacedV0_V0Analyzer_h
 #define DisplacedV0_V0Analyzer_h
-
-// include other parts of the DisplacedV0 package
-#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
 
 // system include files
 #include <memory>
@@ -50,16 +47,6 @@
 // vertex fitter include files
 #include "RecoVertex/VertexPrimitives/interface/TransientVertex.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
-// Prefer interface/ when present (CMSSW_14_0+); fall back to upstream src/ path.
-#if defined(__has_include)
-#if __has_include("MagneticField/ParametrizedEngine/interface/OAEParametrizedMagneticField.h")
-#include "MagneticField/ParametrizedEngine/interface/OAEParametrizedMagneticField.h"
-#else
-#include "MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h"
-#endif
-#else
-#include "MagneticField/ParametrizedEngine/src/OAEParametrizedMagneticField.h"
-#endif
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
