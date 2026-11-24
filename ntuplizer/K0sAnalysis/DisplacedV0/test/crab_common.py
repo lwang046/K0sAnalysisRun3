@@ -1,7 +1,7 @@
 """Shared CRAB3 builders for DisplacedV0 Run2024D + Summer24 DY.
 
 Import from the thin submit scripts in this directory. Does **not** run CRAB;
-fill TODO-VERIFY fields on lxplus before ``crab submit``.
+set ``CRAB_STORAGE_SITE`` on lxplus before ``crab submit``.
 
 storageSite
 -----------
@@ -12,8 +12,9 @@ Do **not** invent a T2. Set one of:
 
 Samples / golden JSON
 ---------------------
-DAS strings: ``samples/data_muon_2024.txt``, ``samples/sim_dy_m50_13p6.txt``,
-``conditions.md``. Lumi mask: ``samples/cert/README.md``.
+DAS strings frozen 2026-11-24 (lxplus M3): ``samples/data_muon_2024.txt``,
+``samples/sim_dy_m50_13p6.txt``, ``conditions.md``.
+Lumi mask: ``samples/cert/README.md`` (golden still TODO-VERIFY latest).
 """
 from __future__ import annotations
 
@@ -30,16 +31,17 @@ GOLDEN_LUMIMASK = (
     "Cert_Collisions2024_378981_386951_Golden.json"
 )
 
-# TODO-VERIFY on DAS (see samples/data_muon_2024.txt).
+# FROZEN 2026-11-24 (lxplus M3 smoke; see samples/data_muon_2024.txt).
 DATA_DAS = {
     "Muon0": "/Muon0/Run2024D-PromptReco-v1/MINIAOD",
     "Muon1": "/Muon1/Run2024D-PromptReco-v1/MINIAOD",
 }
 
-# TODO-VERIFY full string on DAS (see samples/sim_dy_m50_13p6.txt).
+# FROZEN 2026-11-24: PTLL-100 MiniAODv6 (inclusive Bin-MLL-50 …v2-v2 has 0 files).
+# See samples/sim_dy_m50_13p6.txt. CMSSW_15_0_22 + el9_amd64_gcc12.
 MC_DAS_DY = (
-    "/DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/"
-    "RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM"
+    "/DYto2L-2Jets_Bin-MLL-50-PTLL-100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/"
+    "RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v3/MINIAODSIM"
 )
 
 # Production psets (smoke one-file cfgs are local cmsRun only).
@@ -83,7 +85,7 @@ def build_data_config(
     cfg.JobType.pyCfgParams = [f"outputFile={out_file}"]
     cfg.JobType.outputFiles = [out_file]
 
-    # TODO-VERIFY on DAS — freeze into samples/data_muon_2024.txt + conditions.md.
+    # Frozen DAS — samples/data_muon_2024.txt + conditions.md.
     cfg.Data.inputDataset = DATA_DAS[muon_pd]
     cfg.Data.inputDBS = "global"
     cfg.Data.splitting = "LumiBased"
@@ -124,8 +126,8 @@ def build_mc_dy_config(
     cfg.JobType.pyCfgParams = [f"outputFile={out_file}"]
     cfg.JobType.outputFiles = [out_file]
 
-    # TODO-VERIFY on DAS — freeze into samples/sim_dy_m50_13p6.txt + conditions.md.
-    # 150X_ token → CMSSW_15_0_X; if only 140X_ exists, switch release + dataset.
+    # Frozen DAS — samples/sim_dy_m50_13p6.txt + conditions.md.
+    # 150X_ / MiniAODv6 → CMSSW_15_0_22 + el9_amd64_gcc12 (lxplus9).
     cfg.Data.inputDataset = MC_DAS_DY
     cfg.Data.inputDBS = "global"
     cfg.Data.splitting = "FileBased"
