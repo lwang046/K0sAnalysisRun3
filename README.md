@@ -3,11 +3,12 @@
 Run 3 / 2024 port of the AN-20-111 displaced-track / V0 calibration pipeline
 (\(C(\Delta_{2D})\) from \(K_S^0\) yields in DY \(\mu\mu\) events).
 
-**Status:** Context-only (M0–M3 + offline). **`V0Analyzer` + lean Trigger/Lepton/Jet**
+**Status:** On GitHub [`lwang046/K0sAnalysisRun3`](https://github.com/lwang046/K0sAnalysisRun3)
+(`main`). Context M0–M3 + offline ports done; **`V0Analyzer` + lean Trigger/Lepton/Jet**
 ported from upstream K0sAnalysis (`2a132385`); genWeight/PU hooks filled.
 **Offline `fitting/`, `analysis/`, `v0building/` ported** (RooFit/TF1 path;
 DisplacedV0 branch adaptations; AN sideband + low-Δ2D normalization).
-Not yet on GitHub.
+**No `scram` / `cmsRun` claimed from the Project VM** — run those on lxplus/CMSLPC.
 
 ## Attribution
 
@@ -16,17 +17,20 @@ Not yet on GitHub.
   (`V0Analyzer`, `fitting/`, `analysis/`). This tree is a slim Run 3 fork/port,
   not a rewrite of the physics.
 
-## Docs (Project Context)
+## Docs
 
 | Doc | Path |
 | --- | --- |
-| Method | `/cursor/stores/self/docs/displaced-track-efficiency-run3-2024.md` |
-| Implementation plan | `/cursor/stores/self/docs/displaced-track-efficiency-implementation-plan.md` |
-| Preferences (M0 defaults) | `/cursor/stores/self/preferences.md` |
-| Scaffold status | `/cursor/stores/self/docs/k0s-run3-scaffold-status.md` |
-| cmsRun smoke test | `/cursor/stores/self/docs/cmsrun-smoke-test.md` |
+| Method | [`docs/displaced-track-efficiency-run3-2024.md`](docs/displaced-track-efficiency-run3-2024.md) |
+| Implementation plan | [`docs/displaced-track-efficiency-implementation-plan.md`](docs/displaced-track-efficiency-implementation-plan.md) |
+| First \(C(\Delta_{2D})\) recipe | [`docs/first-c-delta2d-recipe.md`](docs/first-c-delta2d-recipe.md) |
+| lxplus runbook | [`docs/lxplus-first-c-runbook.md`](docs/lxplus-first-c-runbook.md) |
+| Run 3 (2024) audit checklist | [`docs/run3-2024-audit-checklist.md`](docs/run3-2024-audit-checklist.md) |
+| cmsRun smoke test | [`docs/cmsrun-smoke-test.md`](docs/cmsrun-smoke-test.md) |
+| Scaffold status | [`docs/k0s-run3-scaffold-status.md`](docs/k0s-run3-scaffold-status.md) |
+| Docs index | [`docs/README.md`](docs/README.md) |
 
-Copies under `docs/` in this tree point at those Context paths.
+M0 defaults are summarized in the table below (also in the plan §8).
 
 ## Layout
 
@@ -42,12 +46,10 @@ K0sAnalysisRun3/
 ├── analysis/                     # C(Δ2D) fill/plot configs (Run3 bins)
 ├── tools/, plotting/             # Minimal deps for offline imports
 ├── scripts/                      # DAS discovery, submit helpers
-└── docs/                         # pointers to Context method/plan
+└── docs/                         # method, plan, recipe, runbook, audit
 ```
 
 ## M0 decisions (locked)
-
-From `preferences.md` / plan §8 defaults:
 
 | Decision | Choice |
 | --- | --- |
@@ -62,34 +64,28 @@ From `preferences.md` / plan §8 defaults:
 ## Build sketch (when CMSSW available)
 
 Full steps, MagField notes, and branch checklist:
-[`/cursor/stores/self/docs/cmsrun-smoke-test.md`](/cursor/stores/self/docs/cmsrun-smoke-test.md)
+[`docs/cmsrun-smoke-test.md`](docs/cmsrun-smoke-test.md).
+Run 3 physics gates before freezing SF:
+[`docs/run3-2024-audit-checklist.md`](docs/run3-2024-audit-checklist.md).
+
+Neon recommends a two-level scram layout
+`$CMSSW_BASE/src/K0sAnalysis/DisplacedV0`
+(a code worker may still be relocating files / updating imports — use that PR’s
+paths if they differ). Example:
 
 ```bash
 cmsrel CMSSW_14_0_X   # match MiniAOD campaign token
 cd CMSSW_*/src && cmsenv
-# symlink/copy as $CMSSW_BASE/src/DisplacedV0 (not under ntuplizer/)
-ln -s /path/to/K0sAnalysisRun3/ntuplizer/DisplacedV0 DisplacedV0
+mkdir -p K0sAnalysis
+ln -s /path/to/K0sAnalysisRun3/ntuplizer/DisplacedV0 K0sAnalysis/DisplacedV0
 scram b -j8
-cmsRun DisplacedV0/python/test_data_onefile_cfg.py \
+# Until imports are updated for the subsystem, smoke cfgs may still expect
+# DisplacedV0/… at $CMSSW_BASE/src — see docs/cmsrun-smoke-test.md
+cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \
   inputFiles=file:/path/to/miniaod.root maxEvents=200
-cmsRun DisplacedV0/python/test_mc_onefile_cfg.py \
+cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \
   inputFiles=file:/path/to/miniaodsim.root maxEvents=200
 ```
 
 This Project VM has no CMSSW — run the above on lxplus/CMSLPC.
-
-## Later: push to GitHub
-
-See `/cursor/stores/self/docs/k0s-run3-scaffold-status.md` § “How to push later”.
-When `lwang046/K0sAnalysisRun3` exists and the Cursor GitHub App can access it:
-
-```bash
-cd /cursor/stores/self/code/K0sAnalysisRun3
-git init
-git remote add origin git@github.com:lwang046/K0sAnalysisRun3.git
-# optionally: merge/seed from LukaLambrecht/K0sAnalysis history
-git add -A && git commit -m "M0–M3 Run3 scaffold"
-git push -u origin main
-```
-
-Do **not** push into `lwang046/HepTools`.
+Ordered lxplus session: [`docs/lxplus-first-c-runbook.md`](docs/lxplus-first-c-runbook.md).

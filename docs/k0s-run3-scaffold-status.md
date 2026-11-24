@@ -8,18 +8,17 @@
 
 ## Location
 
-GitHub: `https://github.com/lwang046/K0sAnalysisRun3`  
-Context: `/cursor/stores/self/docs/`
+GitHub: `https://github.com/lwang046/K0sAnalysisRun3`
 
-Canonical docs:
+Canonical docs (in-repo `docs/`):
 
-- `/cursor/stores/self/docs/displaced-track-efficiency-run3-2024.md`
-- `/cursor/stores/self/docs/displaced-track-efficiency-implementation-plan.md`
-- `/cursor/stores/self/docs/cmsrun-smoke-test.md`
-- `/cursor/stores/self/docs/first-c-delta2d-recipe.md`
-- `/cursor/stores/self/docs/lxplus-first-c-runbook.md` *(lxplus ordered commands)*
-- `/cursor/stores/self/docs/k0s-run3-scaffold-status.md`
-- `/cursor/stores/self/preferences.md`
+- `docs/displaced-track-efficiency-run3-2024.md`
+- `docs/displaced-track-efficiency-implementation-plan.md`
+- `docs/cmsrun-smoke-test.md`
+- `docs/first-c-delta2d-recipe.md`
+- `docs/lxplus-first-c-runbook.md` *(lxplus ordered commands)*
+- `docs/run3-2024-audit-checklist.md` *(Neon Run 3 physics gates)*
+- `docs/k0s-run3-scaffold-status.md`
 
 ---
 
@@ -38,7 +37,7 @@ Canonical docs:
 
 | Deliverable | Status | Notes |
 | --- | --- | --- |
-| **M0** plan defaults | Done | `preferences.md` / README |
+| **M0** plan defaults | Done | README M0 table / plan §8 |
 | **M1** README + tree | Done | Attribution to AN-20-111 / K0sAnalysis |
 | **M2** samples / HLT / cert / conditions | **First-era freeze (best-effort)** | **Run2024D** PromptReco Muon0/1 + Summer24 DYto2L FxFx stubs; DeepJet placeholder `0.0494`; full DAS/WP still **TODO-VERIFY** |
 | **M3** DisplacedV0 | Analyzers + MagField hardening | `useESMagneticField`; OAE default; **no cmsRun on VM** |
@@ -70,7 +69,7 @@ Canonical docs:
 5. CRAB smoke → full (Muon0/1 + DY) with `export CRAB_STORAGE_SITE=…`  
 6. v0building → sideband fits → `mcvsdata_fill` → SF export  
 
-Follow: `/cursor/stores/self/docs/lxplus-first-c-runbook.md` (also `docs/` in repo after sync PR).
+Follow: `docs/lxplus-first-c-runbook.md`. Physics gates: `docs/run3-2024-audit-checklist.md`.
 
 ---
 
