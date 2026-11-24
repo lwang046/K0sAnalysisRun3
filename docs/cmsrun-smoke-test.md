@@ -184,18 +184,18 @@ print("Ks candidates drawn", int(h.GetEntries()), "mean", h.GetMean())
 PY
 ```
 
-| Group | Branches to see (first-C slim, CDTE-31) |
+| Group | Branches to see (Sol production after #14/#15) |
 | --- | --- |
 | Event | `run`, `luminosityBlock`, `event`, `nPV` |
-| Weights | `genWeight` (=1 on data), `Pileup_nTrue` (−1 on data; filled on MC) |
+| Weights | `genWeight` (signed on MC), `Pileup_nTrue` (in-time BX=0; −1 on data) |
 | Trigger | `passDimuonHLT` (no per-path `HLT_*` leaf) |
-| Muons | `nMuon`, `Muon_pt/eta/phi`, `Muon_mediumId`, `Muon_charge` (no `Muon_mass`) |
-| Jets | `nJetSel`, `passDeepJetLooseVeto` (no `Jet_*` arrays) |
-| V0 | `_nV0s`, `_V0InvMass`, `_V0Type` (**1=Ks** with default `storeKsOnly`), `_V0RPV`, `_V0DCA`, daughter `_V0PtPos/Neg`, … (no `_V0RBS*` / ηφ / `_V0D0*` until trackingEff) |
+| Muons | `nMuon`, `Muon_pt/eta/phi`, `Muon_mediumId`, `Muon_charge`; `Dimuon_mass/pt/y` |
+| Jets | `nJetSel`, `nJetSelStatus`, `maxDeepJet`, `passDeepJetLooseVeto` (no `Jet_*`) |
+| V0 | `_nV0s`, `_V0InvMass`, `_V0Type` (**1=Ks** after Λ classification), `_V0RPV(+Sig)`, `_V0DCA`, `_V0VtxNormChi2`, parent pt/η/φ, pointing cosines; daughters pt/η/φ/dxy/dz/hits/χ² + `_V0Src*`/`_V0Idx*`; neighbour stubs status=0 |
 
-**Physics smoke:** among `_V0Type==1`, `_V0InvMass` should pile near **0.498 GeV** (CMSSW preselection is loose; AN §6 tight cuts are offline). With `skipFillIfNoV0=True`, the tree has **no** `_nV0s==0` rows — zero entries on 200 DY events is still a red flag (MagField / track tokens / crash-and-empty); a visible Ks peak is the M3 exit criterion.
+**Physics smoke:** among `_V0Type==1`, `_V0InvMass` should pile near **0.498 GeV** (CMSSW preselection is loose; AN §6 tight cuts are offline). Production default `skipFillIfNoV0=False` keeps `_nV0s==0` Z rows (Path dimuon filter still required). Zero tree entries on 200 DY events is a red flag (MagField / track tokens / crash-and-empty); a visible Ks peak is the M3 exit criterion.
 
-**Size / CRAB:** after CDTE-30/31 slim lands, resubmit full CRAB for new ntuples (do not delete existing EOS output). Synthetic size factors: `python3 scripts/estimate_ntuple_slim_factor.py`.
+**Size / CRAB:** after Sol schema lands, resubmit full CRAB for new ntuples (do not delete existing EOS output). Synthetic size factors: `python3 scripts/estimate_ntuple_slim_factor.py`.
 
 ---
 

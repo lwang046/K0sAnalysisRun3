@@ -8,8 +8,8 @@
  Run3 / K0sAnalysisRun3 adaptations:
    - Owner: DisplacedV0Ntuple* (was multilep*)
    - Single jet collection (cfi: slimmedJetsPuppi); DeepFlavour sum in-memory
-   - CDTE-31: store only event scalars passDeepJetLooseVeto + nJetSel
-     (drop Jet_* / nJet arrays — heavy vs first-C need)
+   - Compact scalars only (no Jet_* arrays): nJetSel, passDeepJetLooseVeto,
+     maxDeepJet among eligible jets + nJetSelStatus (0=none, 1=ok)
 */
 #ifndef DisplacedV0_JetAnalyzer_h
 #define DisplacedV0_JetAnalyzer_h
@@ -27,6 +27,9 @@ private:
   float deepJetLooseWP_{0.0494f};
   unsigned _nJetSel{0};
   bool _passDeepJetLooseVeto{true};
+  float _maxDeepJet{-1.f};
+  // 0 = no eligible jets (or missing jet collection); 1 = ≥1 eligible jet
+  unsigned char _nJetSelStatus{0};
   DisplacedV0Ntuple* ntuple_{nullptr};
 
   // 2018 UL JetID used as Run3 starting point (same family as upstream is2018=true)

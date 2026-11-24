@@ -10,20 +10,25 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 - **DimuonPreFilter** — lightweight AN §5 DY dimuon EDFilter (Path, ahead of ntuple)
 - **TriggerAnalyzer** — configurable dimuon HLT OR (`hltPaths`, Mass3p8 baseline);
   stores `passDimuonHLT` only (no per-path `HLT_*` leaf)
-- **LeptonAnalyzer** — muon kinematics + `Muon_mediumId` (first-C DY tag)
-- **JetAnalyzer** — AK4 PUPPI DeepJet → `passDeepJetLooseVeto` + `nJetSel`
-- **genWeight / Pileup_nTrue** — small hooks from upstream LheAnalyzer path
+- **LeptonAnalyzer** — muon kinematics + `Muon_mediumId` + `Dimuon_mass/pt/y`
+- **JetAnalyzer** — AK4 PUPPI DeepJet → `nJetSel`, `passDeepJetLooseVeto`,
+  `maxDeepJet`, `nJetSelStatus` (no `Jet_*` arrays)
+- **genWeight / Pileup_nTrue** — signed weight + in-time (BX=0) true PU
 
-**Ntuple slim (CDTE-30 / CDTE-31 / first-C):**
-- `storeKsOnly=True` (no Λ/Λ̄ rows); kinematics as `float`
-- `skipFillIfNoV0=True` — do not `Fill` when `_nV0s==0` (trade-off: nimloth
-  loses zero-Ks DY control events; Path dimuon filter unchanged)
-- Jets: scalars only (`passDeepJetLooseVeto`, `nJetSel`); no `Jet_*` arrays
-- Deferred V0 leaves: `_V0RBS*`, mother `_V0Eta/_V0Phi`, daughter η/φ, `_V0D0*/_V0Dz*`
-- Dropped: unc/PCA/Iso/daughter-PxPyPz, unused muon leaves, `Muon_mass`, per-path HLT
+**Sol production schema (after #14/#15):**
+- `skipFillIfNoV0=False` — **one row per Path-selected Z→μμ event**, including
+  `_nV0s==0` (nimloth DY controls). Set `True` only for size-debug CRAB.
+- `storeKsOnly=True` — Ks rows only **after** Λ/Λ̄ classification; float32
+- Jets: compact scalars only (no full `Jet_*` arrays)
+- Per Ks: mass, pt/η/φ, RPV(+Sig), DCA, vtx χ²/ndf, pointing cosines PV+BS
+- Per daughter: pt/η/φ, dxy/dz, hits, track χ²/ndf, packed/lost src+index
+- Neighbour charged-ΔR stubs (`_V0NearestChg*`, status=0) until jet association
+- Still dropped vs fat: unc/PCA/Iso/daughter-PxPyPz, unused muon leaves,
+  `Muon_mass`, per-path HLT, full `Jet_*`
 
-After merging, **resubmit** CRAB for new output — do **not** delete existing EOS
-files. Size estimate: `python3 scripts/estimate_ntuple_slim_factor.py`.
+Prefer Path `dimuonPreFilter + displacedV0Ntuple` so the vertex analyzer only
+runs on baseline Z events. After merging, **resubmit** CRAB — do **not** delete
+existing EOS files. Size estimate: `python3 scripts/estimate_ntuple_slim_factor.py`.
 
 Full HNL `heavyNeutrino` stack (electrons/taus/Rochester/JEC sources/MET) is
 **not** required for the \(C(\Delta_{2D})\) path and was dropped.

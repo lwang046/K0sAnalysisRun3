@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write a tiny DisplacedV0-like ROOT file for offline dry-runs (no CMSSW).
 
-Creates tree ``displacedV0Ntuple/events`` with the CDTE-31 branch names
+Creates tree ``displacedV0Ntuple/events`` with the Sol production branch names
 expected by ``v0building/v0builder.py`` (DY selection + V0 AN §6 path).
 
 Usage:
@@ -38,6 +38,8 @@ def main():
   event = np.arange(1, n + 1, dtype=np.uint64)
   nPV = np.full(n, 25, dtype=np.int32)
   genWeight = np.ones(n, dtype=np.float32)
+  # Mix of signs for signed-weight bookkeeping smoke
+  genWeight[::7] = -1.0
   Pileup_nTrue = rng.uniform(20, 50, size=n).astype(np.float32)
   passDimuonHLT = np.ones(n, dtype=bool)
 
@@ -51,34 +53,74 @@ def main():
   Muon_charge = np.column_stack([np.ones(n), -np.ones(n)]).astype(np.int32)
   Muon_mediumId = np.ones((n, 2), dtype=bool)
 
-  # CDTE-31: jet scalars (no Jet_* arrays)
+  # Dimuon scalars (Sol Z-row)
+  import vector
+
+  mu1 = vector.zip(
+    {"pt": Muon_pt[:, 0], "eta": Muon_eta[:, 0], "phi": Muon_phi[:, 0], "mass": 0.105658}
+  )
+  mu2 = vector.zip(
+    {"pt": Muon_pt[:, 1], "eta": Muon_eta[:, 1], "phi": Muon_phi[:, 1], "mass": 0.105658}
+  )
+  ll = mu1 + mu2
+  Dimuon_mass = np.asarray(ll.mass, dtype=np.float32)
+  Dimuon_pt = np.asarray(ll.pt, dtype=np.float32)
+  Dimuon_y = np.asarray(ll.rapidity, dtype=np.float32)
+
+  # Compact jet scalars (no Jet_* arrays); include some zero-jet events
   nJetSel = rng.integers(0, 4, size=n).astype(np.uint32)
+  nJetSelStatus = (nJetSel > 0).astype(np.uint8)
+  maxDeepJet = np.where(
+    nJetSel > 0, rng.uniform(0.0, 0.04, size=n), -1.0
+  ).astype(np.float32)
   passDeepJetLooseVeto = np.ones(n, dtype=bool)
 
-  # Variable-length V0 candidates: 1–3 per event (simulates skipFillIfNoV0)
-  nV0 = rng.integers(1, 4, size=n, dtype=np.uint32)
+  # Sol: keep empty-V0 Z rows (~20% with _nV0s==0)
+  nV0 = rng.integers(0, 4, size=n, dtype=np.uint32)
   total = int(nV0.sum())
 
   _V0Type = np.ones(total, dtype=np.uint32)
-  # CDTE-31 slim schema: float32 V0/PV/BS; no RBS / ηφ / D0Dz
   _V0InvMass = rng.normal(0.4976, 0.006, size=total).astype(np.float32)
   _V0RPV = rng.uniform(0.2, 25.0, size=total).astype(np.float32)
   _V0RPVSig = (_V0RPV / 0.05).astype(np.float32)
   _V0DCA = rng.uniform(0.01, 0.15, size=total).astype(np.float32)
   _V0VtxNormChi2 = rng.uniform(0.5, 5.0, size=total).astype(np.float32)
   _V0Pt = rng.uniform(1.5, 8.0, size=total).astype(np.float32)
+  _V0Eta = rng.uniform(-2.0, 2.0, size=total).astype(np.float32)
+  _V0Phi = rng.uniform(-np.pi, np.pi, size=total).astype(np.float32)
   _V0PtPos = rng.uniform(1.1, 5.0, size=total).astype(np.float32)
   _V0PtNeg = rng.uniform(1.1, 5.0, size=total).astype(np.float32)
+  _V0EtaPos = rng.uniform(-2.0, 2.0, size=total).astype(np.float32)
+  _V0EtaNeg = rng.uniform(-2.0, 2.0, size=total).astype(np.float32)
+  _V0PhiPos = rng.uniform(-np.pi, np.pi, size=total).astype(np.float32)
+  _V0PhiNeg = rng.uniform(-np.pi, np.pi, size=total).astype(np.float32)
   _V0NHitsPos = rng.integers(8, 20, size=total).astype(np.float32)
   _V0NHitsNeg = rng.integers(8, 20, size=total).astype(np.float32)
   _V0NormChi2Pos = rng.uniform(0.5, 3.0, size=total).astype(np.float32)
   _V0NormChi2Neg = rng.uniform(0.5, 3.0, size=total).astype(np.float32)
+  _V0D0Pos = rng.uniform(0.05, 0.8, size=total).astype(np.float32)
+  _V0DzPos = rng.uniform(-1.5, 1.5, size=total).astype(np.float32)
+  _V0D0Neg = rng.uniform(0.05, 0.8, size=total).astype(np.float32)
+  _V0DzNeg = rng.uniform(-1.5, 1.5, size=total).astype(np.float32)
+  _V0SrcPos = rng.integers(0, 2, size=total, dtype=np.uint8)
+  _V0SrcNeg = rng.integers(0, 2, size=total, dtype=np.uint8)
+  _V0IdxPos = rng.integers(0, 200, size=total, dtype=np.int32)
+  _V0IdxNeg = rng.integers(0, 200, size=total, dtype=np.int32)
   # Position + momentum aligned so cosθ_pointing ≈ 1 (passes AN > 0.99 cut)
   _V0X = rng.uniform(1.0, 20.0, size=total).astype(np.float32)
   _V0Y = rng.uniform(1.0, 20.0, size=total).astype(np.float32)
   _V0Z = rng.uniform(-50, 50, size=total).astype(np.float32)
   _V0Px = _V0X.copy()
   _V0Py = _V0Y.copy()
+  _V0CosPointingPV = np.ones(total, dtype=np.float32)
+  _V0CosPointingBS = np.ones(total, dtype=np.float32)
+  # Neighbour stubs (status=0)
+  _V0NearestChgDRPos = np.full(total, np.nan, dtype=np.float32)
+  _V0NearestChgDRNeg = np.full(total, np.nan, dtype=np.float32)
+  _V0NearestChgStatusPos = np.zeros(total, dtype=np.uint8)
+  _V0NearestChgStatusNeg = np.zeros(total, dtype=np.uint8)
+  _V0NChgDR01Pos = np.full(total, -1, dtype=np.int32)
+  _V0NChgDR01Neg = np.full(total, -1, dtype=np.int32)
   _beamSpotX = np.zeros(n, dtype=np.float32)
   _beamSpotY = np.zeros(n, dtype=np.float32)
   _beamSpotZ = np.zeros(n, dtype=np.float32)
@@ -108,7 +150,12 @@ def main():
     "Muon_phi": Muon_phi,
     "Muon_charge": Muon_charge,
     "Muon_mediumId": Muon_mediumId,
+    "Dimuon_mass": Dimuon_mass,
+    "Dimuon_pt": Dimuon_pt,
+    "Dimuon_y": Dimuon_y,
     "nJetSel": nJetSel,
+    "nJetSelStatus": nJetSelStatus,
+    "maxDeepJet": maxDeepJet,
     "passDeepJetLooseVeto": passDeepJetLooseVeto,
     "_nV0s": nV0,
     "_V0Type": jagged(_V0Type),
@@ -118,12 +165,34 @@ def main():
     "_V0DCA": jagged(_V0DCA),
     "_V0VtxNormChi2": jagged(_V0VtxNormChi2),
     "_V0Pt": jagged(_V0Pt),
+    "_V0Eta": jagged(_V0Eta),
+    "_V0Phi": jagged(_V0Phi),
+    "_V0CosPointingPV": jagged(_V0CosPointingPV),
+    "_V0CosPointingBS": jagged(_V0CosPointingBS),
     "_V0PtPos": jagged(_V0PtPos),
     "_V0PtNeg": jagged(_V0PtNeg),
+    "_V0EtaPos": jagged(_V0EtaPos),
+    "_V0EtaNeg": jagged(_V0EtaNeg),
+    "_V0PhiPos": jagged(_V0PhiPos),
+    "_V0PhiNeg": jagged(_V0PhiNeg),
     "_V0NHitsPos": jagged(_V0NHitsPos),
     "_V0NHitsNeg": jagged(_V0NHitsNeg),
     "_V0NormChi2Pos": jagged(_V0NormChi2Pos),
     "_V0NormChi2Neg": jagged(_V0NormChi2Neg),
+    "_V0D0Pos": jagged(_V0D0Pos),
+    "_V0DzPos": jagged(_V0DzPos),
+    "_V0D0Neg": jagged(_V0D0Neg),
+    "_V0DzNeg": jagged(_V0DzNeg),
+    "_V0SrcPos": jagged(_V0SrcPos),
+    "_V0SrcNeg": jagged(_V0SrcNeg),
+    "_V0IdxPos": jagged(_V0IdxPos),
+    "_V0IdxNeg": jagged(_V0IdxNeg),
+    "_V0NearestChgDRPos": jagged(_V0NearestChgDRPos),
+    "_V0NearestChgDRNeg": jagged(_V0NearestChgDRNeg),
+    "_V0NearestChgStatusPos": jagged(_V0NearestChgStatusPos),
+    "_V0NearestChgStatusNeg": jagged(_V0NearestChgStatusNeg),
+    "_V0NChgDR01Pos": jagged(_V0NChgDR01Pos),
+    "_V0NChgDR01Neg": jagged(_V0NChgDR01Neg),
     "_V0X": jagged(_V0X),
     "_V0Y": jagged(_V0Y),
     "_V0Z": jagged(_V0Z),
@@ -141,7 +210,10 @@ def main():
   os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
   with uproot.recreate(out) as f:
     f["displacedV0Ntuple/events"] = arrays
-  print(f"Wrote {out} with {n} events, {total} V0 candidates")
+  n_empty = int(np.sum(nV0 == 0))
+  print(
+    f"Wrote {out} with {n} events ({n_empty} with _nV0s==0), {total} V0 candidates"
+  )
 
 
 if __name__ == "__main__":
