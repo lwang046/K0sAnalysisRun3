@@ -87,14 +87,40 @@ Exit: tree `displacedV0Ntuple/events` with muons + `_V0Type==1` mass near 0.498.
 
 ## 3. CRAB (M4) — Run2024D + DY
 
+Production psets (wrap the same DisplacedV0 sequence as the one-file smoke cfgs):
+
+- `ntuplizer/DisplacedV0/python/displacedV0_data_cfg.py`
+- `ntuplizer/DisplacedV0/python/displacedV0_mc_cfg.py`
+
+Shared CRAB builders + PLACEHOLDER `storageSite`: `ntuplizer/DisplacedV0/test/crab_common.py`  
+(details: `ntuplizer/DisplacedV0/test/README.md`).
+
 ```bash
-# Edit storageSite + confirmed DAS names in:
-#   ntuplizer/DisplacedV0/test/crab_data_2024.py   # Muon0 Run2024D (+ Muon1 twin)
-#   ntuplizer/DisplacedV0/test/crab_mc_dy.py
-crab submit -c DisplacedV0/test/crab_data_2024.py
+# On lxplus / CMSLPC after cmsenv + scram b (DisplacedV0 linked into $CMSSW_BASE/src):
+#
+# 1) TODO-VERIFY DAS + golden JSON (samples/*.txt, samples/cert/README.md, conditions.md)
+# 2) Set your writeable site — do NOT invent a T2 in git:
+export CRAB_STORAGE_SITE=T2_CH_CERN   # replace with *your* site
+
+# 3) Smoke first (few lumis / few files):
+crab submit -c DisplacedV0/test/crab_data_2024_smoke.py   # Muon0, totalUnits=20
+crab submit -c DisplacedV0/test/crab_mc_dy_smoke.py        # DY, totalUnits=2
+
+# 4) Full submit (Muon0 + Muon1 twin + DY):
+crab submit -c DisplacedV0/test/crab_data_2024.py          # Muon0
+crab submit -c DisplacedV0/test/crab_data_2024_muon1.py    # Muon1
 crab submit -c DisplacedV0/test/crab_mc_dy.py
-# Smoke first (few lumis / few files), then full submit.
 ```
+
+| Config | `requestName` / `outputDatasetTag` | Job `outputFiles` |
+| --- | --- | --- |
+| Muon0 | `DisplacedV0_Muon0_Run2024D` | `DisplacedV0_Muon0_Run2024D.root` |
+| Muon1 | `DisplacedV0_Muon1_Run2024D` | `DisplacedV0_Muon1_Run2024D.root` |
+| DY | `DisplacedV0_DY_Summer24` | `DisplacedV0_DY_Summer24.root` |
+
+Smoke jobs append `_smoke` to `requestName` only. Merged EOS paths for v0building
+still look like `displacedV0_Muon0_Run2024D.root` / `displacedV0_DY_Summer24.root`
+after hadd / rename as needed.
 
 ---
 
@@ -108,12 +134,13 @@ cd /path/to/K0sAnalysisRun3/v0building
 DJWP=0.0494   # TODO-VERIFY
 
 python3 v0builder.py \
-  -i /eos/.../displacedV0_Muon0_Run2024D.root \
+  -i /eos/.../DisplacedV0_Muon0_Run2024D.root \
   -o /eos/.../v0sel_data_Run2024D.root \
   --apply-dy-selection --deepjet-loose-wp $DJWP --selection legacy
+# Also process Muon1 (DisplacedV0_Muon1_Run2024D.root) the same way; merge eras later.
 
 python3 v0builder.py \
-  -i /eos/.../displacedV0_DY_Summer24.root \
+  -i /eos/.../DisplacedV0_DY_Summer24.root \
   -o /eos/.../v0sel_dy_Summer24.root \
   --apply-dy-selection --deepjet-loose-wp $DJWP --selection legacy
 ```

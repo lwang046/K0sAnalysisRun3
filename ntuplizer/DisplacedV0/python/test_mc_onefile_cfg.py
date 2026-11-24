@@ -1,5 +1,8 @@
 """Local smoke: DY MiniAODSIM one file.
 
+Placeholder for one-file ``cmsRun`` only. CRAB production uses
+``displacedV0_mc_cfg.py`` (same DisplacedV0 sequence, ``maxEvents=-1``).
+
 Usage (from $CMSSW_BASE/src after cmsenv + scram b):
   cmsRun DisplacedV0/python/test_mc_onefile_cfg.py \\
     inputFiles=file:/path/to/miniaodsim.root maxEvents=200

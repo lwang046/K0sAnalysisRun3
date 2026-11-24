@@ -1,5 +1,8 @@
 """Local smoke: 100–1000 events of 2024 Muon MiniAOD.
 
+Placeholder for one-file ``cmsRun`` only. CRAB production uses
+``displacedV0_data_cfg.py`` (same DisplacedV0 sequence, ``maxEvents=-1``).
+
 Usage (from $CMSSW_BASE/src after cmsenv + scram b):
   cmsRun DisplacedV0/python/test_data_onefile_cfg.py \\
     inputFiles=file:/path/to/miniaod.root maxEvents=200

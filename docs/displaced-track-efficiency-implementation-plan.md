@@ -37,7 +37,7 @@ K0sAnalysisRun3/                    # git fork; main branch = Run3 port
 │       ├── src/V0Analyzer.cc       # port from K0sAnalysis/.../V0Analyzer.cc
 │       ├── interface/V0Analyzer.h
 │       ├── python/displacedV0_cfi.py
-│       └── test/{multilep_run3.py →} crab_data_2024.py, crab_mc_dy.py
+│       └── test/crab_common.py, crab_data_2024{,_muon1,_smoke}.py, crab_mc_dy{,_smoke}.py
 ├── skimming/                       # keep K0sAnalysis skim scripts; update triggers
 ├── v0building/                     # if present upstream; else keep offline rebuild
 ├── fitting/                        # fitinvmass*, count_peak — reuse

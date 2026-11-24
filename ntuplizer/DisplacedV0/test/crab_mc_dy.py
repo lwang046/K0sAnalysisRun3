@@ -1,25 +1,18 @@
-"""CRAB3 stub — DYto2L MLL>50 13p6 MiniAODSIM. Fill from samples/sim_dy_m50_13p6.txt."""
-from CRABClient.UserUtilities import config
+"""CRAB3 — Summer24 DYto2L MLL>50 MiniAODSIM (full submit settings).
 
-config = config()
-config.General.requestName = "DisplacedV0_DYto2L_MLL50_13p6"
-config.General.workArea = "crab_DisplacedV0_mc"
-config.General.transferOutputs = True
+Shared pattern: ``crab_common.build_mc_dy_config``.
+Smoke (few files): ``crab_mc_dy_smoke.py``.
 
-config.JobType.pluginName = "Analysis"
-config.JobType.psetName = "../python/test_mc_onefile_cfg.py"
-config.JobType.outputFiles = ["displacedV0_mc.root"]
+Before submit on lxplus:
+  1. TODO-VERIFY DAS string (samples/sim_dy_m50_13p6.txt, conditions.md)
+  2. Match CMSSW to 140X_ / 150X_ token in the chosen dataset
+  3. export CRAB_STORAGE_SITE=<your writeable T2>
+  4. crab submit -c DisplacedV0/test/crab_mc_dy.py
+"""
+import os
+import sys
 
-# PdmV Summer24 naming (not legacy DYJetsToLL). TODO-VERIFY full string on DAS.
-# 150X_ token → CMSSW_15_0_X; if only 140X_ exists, switch release + dataset.
-config.Data.inputDataset = (
-    "/DYto2L-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/"
-    "RunIII2024Summer24MiniAODv6-150X_mcRun3_2024_realistic_v2-v2/MINIAODSIM"
-)
-config.Data.inputDBS = "global"
-config.Data.splitting = "FileBased"
-config.Data.unitsPerJob = 2
-config.Data.publication = False
-config.Data.outputDatasetTag = "DisplacedV0_Run3_DY_v0"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from crab_common import build_mc_dy_config  # noqa: E402
 
-config.Site.storageSite = "T2_XX_XXX"  # PLACEHOLDER
+config = build_mc_dy_config(smoke=False)
