@@ -228,4 +228,5 @@ layer features, norm ±1 bin, sideband degree, era/PU checks as stats allow).
 - Method: `docs/displaced-track-efficiency-run3-2024.md`
 - Plan: `docs/displaced-track-efficiency-implementation-plan.md` (M2–M7)
 - Smoke: `docs/cmsrun-smoke-test.md`
+- **lxplus ordered runbook:** `docs/lxplus-first-c-runbook.md`
 - Status: `docs/k0s-run3-scaffold-status.md`
