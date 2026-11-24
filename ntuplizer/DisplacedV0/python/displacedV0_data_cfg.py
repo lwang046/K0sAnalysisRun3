@@ -20,13 +20,8 @@ from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing("analysis")
 options.maxEvents = -1
 options.inputFiles = "file:PLACEHOLDER_DATA_MINIAOD.root"
-options.register(
-    "outputFile",
-    "displacedV0_data.root",
-    VarParsing.multiplicity.singleton,
-    VarParsing.varType.string,
-    "TFileService output; must match CRAB JobType.outputFiles",
-)
+# "analysis" already registers outputFile — set default only (do not re-register).
+options.outputFile = "displacedV0_data.root"
 options.register(
     "useESMagneticField",
     False,
