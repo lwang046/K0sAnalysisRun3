@@ -68,13 +68,15 @@ export SCRAM_ARCH=el8_amd64_gcc12   # verify for release
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cmsrel CMSSW_14_0_19                 # or 15_0_X if MiniAODv6 / 150X_
 cd CMSSW_14_0_19/src && cmsenv
-ln -s /path/to/K0sAnalysisRun3/ntuplizer/DisplacedV0 DisplacedV0
+# Neon two-level layout (code worker may still update imports — see smoke doc)
+mkdir -p K0sAnalysis
+ln -s /path/to/K0sAnalysisRun3/ntuplizer/DisplacedV0 K0sAnalysis/DisplacedV0
 scram b -j8
 
 # One MiniAOD file each (xrdcp / dasgoclient)
-cmsRun DisplacedV0/python/test_data_onefile_cfg.py \
+cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \
   inputFiles=file:$PWD/data_one.root maxEvents=200
-cmsRun DisplacedV0/python/test_mc_onefile_cfg.py \
+cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \
   inputFiles=file:$PWD/dy_one.root maxEvents=200
 
 # Optional ES MagField path:
@@ -96,20 +98,21 @@ Shared CRAB builders + PLACEHOLDER `storageSite`: `ntuplizer/DisplacedV0/test/cr
 (details: `ntuplizer/DisplacedV0/test/README.md`).
 
 ```bash
-# On lxplus / CMSLPC after cmsenv + scram b (DisplacedV0 linked into $CMSSW_BASE/src):
+# On lxplus / CMSLPC after cmsenv + scram b
+# (package at $CMSSW_BASE/src/K0sAnalysis/DisplacedV0 — or flat DisplacedV0 until imports catch up):
 #
 # 1) TODO-VERIFY DAS + golden JSON (samples/*.txt, samples/cert/README.md, conditions.md)
 # 2) Set your writeable site — do NOT invent a T2 in git:
 export CRAB_STORAGE_SITE=T2_CH_CERN   # replace with *your* site
 
 # 3) Smoke first (few lumis / few files):
-crab submit -c DisplacedV0/test/crab_data_2024_smoke.py   # Muon0, totalUnits=20
-crab submit -c DisplacedV0/test/crab_mc_dy_smoke.py        # DY, totalUnits=2
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024_smoke.py   # Muon0, totalUnits=20
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy_smoke.py        # DY, totalUnits=2
 
 # 4) Full submit (Muon0 + Muon1 twin + DY):
-crab submit -c DisplacedV0/test/crab_data_2024.py          # Muon0
-crab submit -c DisplacedV0/test/crab_data_2024_muon1.py    # Muon1
-crab submit -c DisplacedV0/test/crab_mc_dy.py
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024.py          # Muon0
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024_muon1.py    # Muon1
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy.py
 ```
 
 | Config | `requestName` / `outputDatasetTag` | Job `outputFiles` |
@@ -229,4 +232,5 @@ layer features, norm ±1 bin, sideband degree, era/PU checks as stats allow).
 - Plan: `docs/displaced-track-efficiency-implementation-plan.md` (M2–M7)
 - Smoke: `docs/cmsrun-smoke-test.md`
 - **lxplus ordered runbook:** `docs/lxplus-first-c-runbook.md`
+- **Run 3 (2024) audit checklist:** [`run3-2024-audit-checklist.md`](run3-2024-audit-checklist.md)
 - Status: `docs/k0s-run3-scaffold-status.md`

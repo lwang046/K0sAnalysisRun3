@@ -1,6 +1,6 @@
 # Local cmsRun / scram smoke test — `DisplacedV0`
 
-**Package:** `/cursor/stores/self/code/K0sAnalysisRun3/ntuplizer/DisplacedV0/`  
+**Package:** `ntuplizer/DisplacedV0/` in this repository  
 **Audience:** lxplus / CMSLPC / any machine with CVMFS + a Run-3 CMSSW release  
 **Goal:** first successful `scram b` + one-file `cmsRun` (data + MC) before CRAB
 
@@ -23,7 +23,7 @@ Match the MiniAOD campaign token (from DAS / PdmV), not a guess:
 
 Typical SCRAM_ARCH (verify on the release page / `scram list`): `el8_amd64_gcc12` for 14_0.
 
-Pin exact release + GT strings in `code/K0sAnalysisRun3/conditions.md` on the first green smoke.
+Pin exact release + GT strings in `conditions.md` (repo root) on the first green smoke.
 
 Aliases already in the one-file cfgs:
 
@@ -43,19 +43,21 @@ cmsrel CMSSW_14_0_19                 # example — use the patch that matches Mi
 cd CMSSW_14_0_19/src
 cmsenv
 
-# Package must live at $CMSSW_BASE/src/DisplacedV0/ (SCRAM package name = top dir)
+# Neon: two-level Subsystem/Package layout (preferred).
+# A code worker may still be relocating files / updating Python imports —
+# if their PR differs, follow that layout instead.
 PKG_SRC=/path/to/K0sAnalysisRun3/ntuplizer/DisplacedV0
-# Prefer a symlink while iterating; copy if the Context path is not mounted on the host
-ln -s "$PKG_SRC" DisplacedV0
-# OR:  cp -a "$PKG_SRC" DisplacedV0
+mkdir -p K0sAnalysis
+ln -s "$PKG_SRC" K0sAnalysis/DisplacedV0
+# OR:  cp -a "$PKG_SRC" K0sAnalysis/DisplacedV0
 
 scram b -j8
 ```
 
-**Layout check after link/copy:**
+**Layout check after link/copy (Neon-recommended):**
 
 ```text
-$CMSSW_BASE/src/DisplacedV0/
+$CMSSW_BASE/src/K0sAnalysis/DisplacedV0/
 ├── BuildFile.xml
 ├── interface/
 ├── plugins/          # EDM plugin DisplacedV0Ntuple
@@ -65,6 +67,11 @@ $CMSSW_BASE/src/DisplacedV0/
 ```
 
 Do **not** leave the package under `ntuplizer/DisplacedV0/` inside `src/` — SCRAM would then expect a `ntuplizer` package name and imports would break.
+
+**Import note:** current one-file cfgs use `from DisplacedV0.displacedV0_cfi import …`
+(flat `$CMSSW_BASE/src/DisplacedV0`). After moving under `K0sAnalysis/`, imports become
+`from K0sAnalysis.DisplacedV0.displacedV0_cfi import …` — expect a code-worker PR for that;
+until then a temporary flat `ln -s … DisplacedV0` may still be needed for smoke.
 
 ---
 
@@ -90,10 +97,11 @@ Remote `root://...` in `inputFiles` is fine if the site/proxy works; local `file
 From `$CMSSW_BASE/src` (after `cmsenv`):
 
 ```bash
-cmsRun DisplacedV0/python/test_data_onefile_cfg.py \
+# Neon path (after import update); else use DisplacedV0/python/… with flat link
+cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \
   inputFiles=file:$PWD/data_one.root maxEvents=200
 
-cmsRun DisplacedV0/python/test_mc_onefile_cfg.py \
+cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \
   inputFiles=file:$PWD/dy_one.root maxEvents=200
 ```
 
@@ -189,7 +197,7 @@ PY
 ## 7. Pass / fail checklist
 
 - [ ] `cmsrel` + `cmsenv` on `CMSSW_14_0_X` or `15_0_X` matching MiniAOD
-- [ ] `DisplacedV0` linked/copied at `$CMSSW_BASE/src/DisplacedV0`
+- [ ] `DisplacedV0` linked/copied at `$CMSSW_BASE/src/K0sAnalysis/DisplacedV0` (Neon; or flat `DisplacedV0` until imports catch up)
 - [ ] `scram b -j8` succeeds (watch MagField include + plugin link)
 - [ ] Data `cmsRun` writes `displacedV0_data_smoke.root` with tree `displacedV0Ntuple/events`
 - [ ] MC `cmsRun` same; `genWeight` / `Pileup_nTrue` not stuck at defaults on every event
@@ -197,8 +205,10 @@ PY
 - [ ] `_V0Type==1` mass near 0.498 visible
 - [ ] Exact release + resolved GT recorded in `conditions.md`
 
-When all boxes pass, M3 local smoke is done; next is CRAB under `DisplacedV0/test/`
-(see `docs/first-c-delta2d-recipe.md` §3 and `DisplacedV0/test/README.md`).
+When all boxes pass, M3 local smoke is done; next is CRAB under
+`K0sAnalysis/DisplacedV0/test/` (or `DisplacedV0/test/` with flat link) —
+see `docs/first-c-delta2d-recipe.md` §3 and `ntuplizer/DisplacedV0/test/README.md`.
+Also run the physics gates in [`run3-2024-audit-checklist.md`](run3-2024-audit-checklist.md).
 
 ---
 
