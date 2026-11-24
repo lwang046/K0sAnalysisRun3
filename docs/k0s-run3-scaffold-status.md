@@ -30,7 +30,7 @@ Canonical docs:
 | Target GitHub | `https://github.com/lwang046/K0sAnalysisRun3` |
 | `main` tip (this turn) | `55743ff` — Fix VarParsing: do not re-register analysis outputFile (#5) |
 | Merged | [#2](https://github.com/lwang046/K0sAnalysisRun3/pull/2) prep · [#4](https://github.com/lwang046/K0sAnalysisRun3/pull/4) CRAB · [#5](https://github.com/lwang046/K0sAnalysisRun3/pull/5) VarParsing |
-| This handoff branch | `cursor/lxplus-first-c-runbook-aa6b` (docs sync) |
+| This handoff branch / PR | `cursor/lxplus-first-c-runbook-aa6b` — [#6](https://github.com/lwang046/K0sAnalysisRun3/pull/6) |
 | HepTools | Untouched |
 
 ---
