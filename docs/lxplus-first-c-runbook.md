@@ -104,7 +104,10 @@ export SCRAM_ARCH=el8_amd64_gcc12   # verify for chosen release
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cmsrel CMSSW_14_0_19                 # or CMSSW_15_0_X if MiniAODv6 / 150X_
 cd CMSSW_14_0_19/src && cmsenv
+# Preferred symlink (Subsystem directory). Do NOT link bare DisplacedV0 at src/.
 ln -s $REPO/ntuplizer/K0sAnalysis K0sAnalysis   # → src/K0sAnalysis/DisplacedV0
+# Verify before scram: test -d K0sAnalysis/DisplacedV0/plugins && ls K0sAnalysis/DisplacedV0/BuildFile.xml
+# Confirm no flat leftover: test ! -e DisplacedV0 || echo 'REMOVE flat src/DisplacedV0'
 scram b -j8
 
 # One file each (after DAS freeze):
@@ -213,12 +216,16 @@ python3 mcvsdata_fill.py \
   --sidevariable ../fitting/variables/variable_ks_invmass.json \
   --normmode range \
   --normvariable ../fitting/variables/variable_norm_rpv.json \
+  --norm-stability-uppers 1.0,3.0 \
+  --peak-halfwidth-frac 0.25 \
   --weightvar _weight \
   --ntrueintvar _nTrueInt \
   --nopileup
 ```
 
 Config: `config_ksvars.py` (Δ2D bins, sideband `_mass`, `normrange=[0,2]`).
+Writes `norm_scale`, `norm_shared_up/down`, optional `norm_scale_alt_upper_*` (CDTE-25).
+
 
 ### J. SF export
 

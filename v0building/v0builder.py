@@ -376,7 +376,25 @@ if __name__ == "__main__":
     out["_ptNeg"] = ak.flatten(branches["_V0PtNeg"][mask])
     out["_normChi2Pos"] = ak.flatten(branches["_V0NormChi2Pos"][mask])
     out["_normChi2Neg"] = ak.flatten(branches["_V0NormChi2Neg"][mask])
+    # Daughter–daughter separation (kept) + each daughter's IP (CDTE-26 / trackingEff).
+    # DisplacedV0 already stores _V0D0{Pos,Neg} / _V0Dz{Pos,Neg}; do not drop them.
     out["_trackdR"] = ak.flatten(trackdR[mask])
+    if "_V0D0Pos" in branches.fields:
+      out["_d0Pos"] = ak.flatten(branches["_V0D0Pos"][mask])
+      out["_dzPos"] = ak.flatten(branches["_V0DzPos"][mask])
+      out["_d0Neg"] = ak.flatten(branches["_V0D0Neg"][mask])
+      out["_dzNeg"] = ak.flatten(branches["_V0DzNeg"][mask])
+    if "_V0IsoPos" in branches.fields:
+      out["_isoPos"] = ak.flatten(branches["_V0IsoPos"][mask])
+      out["_isoNeg"] = ak.flatten(branches["_V0IsoNeg"][mask])
+    # Schema hooks for nearest charged-track distance in the matched jet
+    # (trackingEff nuisance). Not computed yet: needs jet↔V0 matching that
+    # JetAnalyzer does not provide. Fill NaN — do not invent physics values.
+    # TODO(CDTE-26): implement after jet-track association lands in DisplacedV0.
+    flat_ones = ak.flatten(branches["_V0Pt"][mask] > -1.0)
+    nan_hook = ak.full_like(ak.values_astype(flat_ones, np.float64), np.nan)
+    out["_trkNearestJetDistPos"] = nan_hook
+    out["_trkNearestJetDistNeg"] = nan_hook
     ones = branches["_V0Pt"][mask] > -1.0
     out["_runNb"] = ak.flatten(ones * branches["_runNb"])
     out["_lumiBlock"] = ak.flatten(ones * branches["_lumiBlock"])

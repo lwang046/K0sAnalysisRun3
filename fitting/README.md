@@ -15,6 +15,22 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 
 Depends on package-local `tools/fittools.py` and `plotting/plotfit.py`.
 
+### Peak window + shared norm (CDTE-25)
+
+`count_peak` masks sidebands, integrates the yield, and builds the statistical
+error on the **same inclusive peak bin window**. Default half-width is 1/4 of
+the sideband histogram x-range (`peak_halfwidth_frac=0.25`); override via
+`count_peak(..., peak_halfwidth=…)` or `mcvsdata_fill.py --peak-halfwidth-frac`.
+
+Low-\(\Delta_{2D}\) normalization (`--normmode range`) writes a shared scale
+`norm_scale = [k, σ_k/k]` and dedicated `norm_shared_up/down` histogram
+variations (100% correlated across bins). Reference-interval stability:
+
+```bash
+python3 analysis/mcvsdata_fill.py ... --normmode range \
+  --norm-stability-uppers 1.0,3.0   # primary still from --normvariable (e.g. [0,2])
+```
+
 ### Typical flow (after v0building)
 
 ```bash

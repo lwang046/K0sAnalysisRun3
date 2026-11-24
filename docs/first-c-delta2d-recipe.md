@@ -182,6 +182,8 @@ python3 mcvsdata_fill.py \
   --sidevariable ../fitting/variables/variable_ks_invmass.json \
   --normmode range \
   --normvariable ../fitting/variables/variable_norm_rpv.json \
+  --norm-stability-uppers 1.0,3.0 \
+  --peak-halfwidth-frac 0.25 \
   --weightvar _weight \
   --ntrueintvar _nTrueInt \
   --nopileup
@@ -189,6 +191,9 @@ python3 mcvsdata_fill.py \
 
 Config reference: `config_ksvars.py` (bins, sideband `_mass`, `normrange=[0,2]`).
 Batch wrapper: `mcvsdata_submit.py` with `--config config_ksvars.py`.
+Output writes shared `norm_scale=[k, σ_k/k]`, `norm_shared_up/down` (correlated),
+and `norm_scale_alt_upper_*` when `--norm-stability-uppers` is set (CDTE-25).
+
 
 ---
 

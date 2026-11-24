@@ -191,7 +191,7 @@ PY
 | Trigger | `passDimuonHLT`, `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8` |
 | Muons | `nMuon`, `Muon_pt/eta/phi`, `Muon_mediumId`, `Muon_pfRelIso04_all`, … |
 | Jets | `nJet`, `Jet_pt`, `Jet_btagDeepFlavB`, `Jet_jetId` |
-| V0 | `_nV0s`, `_V0InvMass`, `_V0Type` (1=Ks, 2=Λ, 3=Λ̄), `_V0RPV` / `_V0RBS`, `_V0DCA`, daughter `_V0PtPos/Neg`, … |
+| V0 | `_nV0s`, `_V0InvMass`, `_V0Type` (1=Ks, 2=Λ, 3=Λ̄), `_V0RPV` / `_V0RBS`, `_V0DCA`, daughter `_V0PtPos/Neg`, **`_V0D0Pos/Neg`**, **`_V0DzPos/Neg`**, … |
 
 **Physics smoke:** among `_V0Type==1`, `_V0InvMass` should pile near **0.498 GeV** (CMSSW preselection is loose; AN §6 tight cuts are offline). Zero V0s on 200 DY events is a red flag (MagField / track tokens / crash-and-empty); a visible Ks peak is the M3 exit criterion.
 
@@ -201,6 +201,9 @@ PY
 
 - [ ] `cmsrel` + `cmsenv` on `CMSSW_14_0_X` or `15_0_X` matching MiniAOD
 - [ ] `K0sAnalysis` linked so `$CMSSW_BASE/src/K0sAnalysis/DisplacedV0` exists
+      (preferred: `ln -s $REPO/ntuplizer/K0sAnalysis K0sAnalysis` — **not** bare `src/DisplacedV0`)
+- [ ] No leftover flat `DisplacedV0` under `$CMSSW_BASE/src/` (Sol compile failure mode)
+- [ ] Includes resolve as `K0sAnalysis/DisplacedV0/...`; Python `from K0sAnalysis.DisplacedV0...`
 - [ ] `scram b -j8` succeeds (watch MagField include + plugin link)
 - [ ] Data `cmsRun` writes `displacedV0_data_smoke.root` with tree `displacedV0Ntuple/events`
 - [ ] MC `cmsRun` same; `genWeight` / `Pileup_nTrue` not stuck at defaults on every event
