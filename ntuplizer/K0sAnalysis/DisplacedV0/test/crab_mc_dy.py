@@ -1,11 +1,11 @@
-"""CRAB3 — Summer24 DYto2L MLL>50 MiniAODSIM (full submit settings).
+"""CRAB3 — Summer24 DYto2L MLL>50 MiniAODSIM (full / production settings).
 
-Shared pattern: ``crab_common.build_mc_dy_config``.
-Smoke (few files): ``crab_mc_dy_smoke.py``.
+Uses ``crab_common.MC_DAS_DY`` (inclusive). Smoke (PTLL-100): ``crab_mc_dy_smoke.py``.
 
 Before submit on lxplus:
-  1. TODO-VERIFY DAS string (samples/sim_dy_m50_13p6.txt, conditions.md)
-  2. Match CMSSW to 140X_ / 150X_ token in the chosen dataset
+  1. TODO-VERIFY inclusive DAS has nfiles>0 (samples/sim_dy_m50_13p6.txt)
+     — do NOT point this at MC_DAS_DY_SMOKE / PTLL-100 for first-C
+  2. Match CMSSW to 150X_ / MiniAODv6 (CMSSW_15_0_22 + el9 on lxplus9)
   3. export CRAB_STORAGE_SITE=<your writeable T2>
   4. crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy.py
 """
