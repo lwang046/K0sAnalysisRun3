@@ -184,16 +184,18 @@ print("Ks candidates drawn", int(h.GetEntries()), "mean", h.GetMean())
 PY
 ```
 
-| Group | Branches to see |
+| Group | Branches to see (first-C slim) |
 | --- | --- |
 | Event | `run`, `luminosityBlock`, `event`, `nPV` |
 | Weights | `genWeight` (=1 on data), `Pileup_nTrue` (−1 on data; filled on MC) |
 | Trigger | `passDimuonHLT`, `HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8` |
-| Muons | `nMuon`, `Muon_pt/eta/phi`, `Muon_mediumId`, `Muon_pfRelIso04_all`, … |
-| Jets | `nJet`, `Jet_pt`, `Jet_btagDeepFlavB`, `Jet_jetId` |
-| V0 | `_nV0s`, `_V0InvMass`, `_V0Type` (1=Ks, 2=Λ, 3=Λ̄), `_V0RPV` / `_V0RBS`, `_V0DCA`, daughter `_V0PtPos/Neg`, **`_V0D0Pos/Neg`**, **`_V0DzPos/Neg`**, … |
+| Muons | `nMuon`, `Muon_pt/eta/phi`, `Muon_mediumId`, `Muon_charge` (float kinematics) |
+| Jets | `nJet`, `Jet_pt`, `Jet_eta`, `Jet_btagDeepFlavB`, `Jet_jetId` |
+| V0 | `_nV0s`, `_V0InvMass`, `_V0Type` (**1=Ks** with default `storeKsOnly`), `_V0RPV` / `_V0RBS`, `_V0DCA`, daughter `_V0PtPos/Neg`, **`_V0D0Pos/Neg`**, **`_V0DzPos/Neg`**, … |
 
 **Physics smoke:** among `_V0Type==1`, `_V0InvMass` should pile near **0.498 GeV** (CMSSW preselection is loose; AN §6 tight cuts are offline). Zero V0s on 200 DY events is a red flag (MagField / track tokens / crash-and-empty); a visible Ks peak is the M3 exit criterion.
+
+**Size / CRAB:** after the CDTE-30 slim lands, resubmit full CRAB for new ntuples (do not delete existing EOS output). Synthetic fat→slim factor: `python3 scripts/estimate_ntuple_slim_factor.py`.
 
 ---
 

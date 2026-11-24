@@ -11,6 +11,8 @@ displacedV0Ntuple = cms.EDAnalyzer(
     #         (load MagneticField_cff + Geometry + TransientTrackBuilder_cfi;
     #         see docs/cmsrun-smoke-test.md).
     useESMagneticField=cms.bool(False),
+    # First-C / CDTE-30: write only Ks (V0Type==1). Set False to also store Λ/Λ̄.
+    storeKsOnly=cms.bool(True),
     muons=cms.InputTag("slimmedMuons"),
     jets=cms.InputTag("slimmedJetsPuppi"),  # AK4 PUPPI; confirm era default
     packedCandidates=cms.InputTag("packedPFCandidates"),

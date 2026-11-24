@@ -9,9 +9,16 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 - **V0Analyzer** — full Kalman body
 - **DimuonPreFilter** — lightweight AN §5 DY dimuon EDFilter (Path, ahead of ntuple)
 - **TriggerAnalyzer** — configurable dimuon HLT OR (`hltPaths`, Mass3p8 baseline)
-- **LeptonAnalyzer** — muon-only medium/loose/tight ID + kinematics/IP/iso
-- **JetAnalyzer** — AK4 PUPPI + DeepJet (`Jet_btagDeepFlavB`) + jetId placeholder
+- **LeptonAnalyzer** — muon kinematics + `Muon_mediumId` (first-C DY tag)
+- **JetAnalyzer** — AK4 PUPPI + DeepJet (`Jet_btagDeepFlavB`) + `Jet_jetId`
 - **genWeight / Pileup_nTrue** — small hooks from upstream LheAnalyzer path
+
+**Ntuple slim (CDTE-30 / first-C):** default `storeKsOnly=True` (no Λ/Λ̄ rows);
+kinematics stored as `float`; unused unc/PCA/Iso/daughter-PxPyPz and unused
+muon/jet leaves dropped. Set `storeKsOnly=False` only if you need telperion
+diagnostics. After merging this change, **resubmit** CRAB for new output —
+do **not** delete existing EOS files. See
+`scripts/estimate_ntuple_slim_factor.py` for a synthetic fat/slim size factor.
 
 Full HNL `heavyNeutrino` stack (electrons/taus/Rochester/JEC sources/MET) is
 **not** required for the \(C(\Delta_{2D})\) path and was dropped.

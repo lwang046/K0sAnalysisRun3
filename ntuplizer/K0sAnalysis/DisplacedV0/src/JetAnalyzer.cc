@@ -8,6 +8,7 @@
  DeepFlavour discriminator labels match upstream; Jet_btagDeepFlavB = b+bb+lepb.
  Jet ID uses upstream 2018 tight / tightLepVeto as Run3 placeholder.
  JEC/MET/substructure bulk dropped. Loose WP applied offline (M5).
+ CDTE-30: drop Jet_phi / Jet_mass / Jet_hadronFlavour; float kinematics.
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/JetAnalyzer.h"
@@ -20,13 +21,10 @@ JetAnalyzer::JetAnalyzer(const edm::ParameterSet& /*iConfig*/, DisplacedV0Ntuple
 
 void JetAnalyzer::beginJob(TTree* outputTree) {
   outputTree->Branch("nJet", &_nJet, "nJet/i");
-  outputTree->Branch("Jet_pt", &_Jet_pt, "Jet_pt[nJet]/D");
-  outputTree->Branch("Jet_eta", &_Jet_eta, "Jet_eta[nJet]/D");
-  outputTree->Branch("Jet_phi", &_Jet_phi, "Jet_phi[nJet]/D");
-  outputTree->Branch("Jet_mass", &_Jet_mass, "Jet_mass[nJet]/D");
-  outputTree->Branch("Jet_btagDeepFlavB", &_Jet_btagDeepFlavB, "Jet_btagDeepFlavB[nJet]/D");
+  outputTree->Branch("Jet_pt", &_Jet_pt, "Jet_pt[nJet]/F");
+  outputTree->Branch("Jet_eta", &_Jet_eta, "Jet_eta[nJet]/F");
+  outputTree->Branch("Jet_btagDeepFlavB", &_Jet_btagDeepFlavB, "Jet_btagDeepFlavB[nJet]/F");
   outputTree->Branch("Jet_jetId", &_Jet_jetId, "Jet_jetId[nJet]/I");
-  outputTree->Branch("Jet_hadronFlavour", &_Jet_hadronFlavour, "Jet_hadronFlavour[nJet]/I");
 }
 
 bool JetAnalyzer::jetIsTight(const pat::Jet& jet) const {
@@ -73,25 +71,19 @@ void JetAnalyzer::analyze(const edm::Event& iEvent) {
     if (std::fabs(jet.eta()) > 5.) continue;
 
     const unsigned i = _nJet;
-    _Jet_pt[i] = jet.pt();
-    _Jet_eta[i] = jet.eta();
-    _Jet_phi[i] = jet.phi();
-    _Jet_mass[i] = jet.mass();
+    _Jet_pt[i] = static_cast<float>(jet.pt());
+    _Jet_eta[i] = static_cast<float>(jet.eta());
 
-    // DeepFlavour (DeepJet) — same discriminator labels as upstream
     const double b = jet.bDiscriminator("pfDeepFlavourJetTags:probb");
     const double bb = jet.bDiscriminator("pfDeepFlavourJetTags:probbb");
     const double lepb = jet.bDiscriminator("pfDeepFlavourJetTags:problepb");
     double deepFlav = b + bb + lepb;
     if (std::isnan(deepFlav)) deepFlav = 0.;
-    _Jet_btagDeepFlavB[i] = deepFlav;
+    _Jet_btagDeepFlavB[i] = static_cast<float>(deepFlav);
 
-    // NanoAOD-style jetId: bit1=tight (2), bit2=tightLepVeto (4)
     const bool tight = jetIsTight(jet);
     const bool tightLepVeto = jetIsTightLepVeto(jet);
     _Jet_jetId[i] = (tight ? 2 : 0) + (tightLepVeto ? 4 : 0);
-
-    _Jet_hadronFlavour[i] = ntuple_->isData_ ? -1 : static_cast<int>(jet.hadronFlavour());
 
     ++_nJet;
   }

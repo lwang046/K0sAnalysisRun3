@@ -8,9 +8,8 @@
  Run3 / K0sAnalysisRun3 adaptations:
    - Owner: DisplacedV0Ntuple* (was multilep*)
    - Single jet collection (cfi: slimmedJetsPuppi); DeepFlavour → Jet_btagDeepFlavB
-   - Dropped JEC/JER source maps, MET, Puppi duplicate collection, PF-candidate dump
-   - Jet ID: 2018-style tight / tightLepVeto as Run3 placeholder (re-validate vs BTV)
-   - Loose WP number stays offline: samples/deepjet_wp_2024.md
+   - CDTE-30 slim: keep pt/eta/btagDeepFlavB/jetId only (v0builder DY b-veto +
+     nimloth nJets); drop phi/mass/hadronFlavour; float kinematics
 */
 #ifndef DisplacedV0_JetAnalyzer_h
 #define DisplacedV0_JetAnalyzer_h
@@ -26,13 +25,10 @@ class JetAnalyzer {
 private:
   static const unsigned nJet_max = 50;
   unsigned _nJet{0};
-  double _Jet_pt[nJet_max]{};
-  double _Jet_eta[nJet_max]{};
-  double _Jet_phi[nJet_max]{};
-  double _Jet_mass[nJet_max]{};
-  double _Jet_btagDeepFlavB[nJet_max]{};
+  float _Jet_pt[nJet_max]{};
+  float _Jet_eta[nJet_max]{};
+  float _Jet_btagDeepFlavB[nJet_max]{};
   int _Jet_jetId[nJet_max]{};
-  int _Jet_hadronFlavour[nJet_max]{};
   DisplacedV0Ntuple* ntuple_{nullptr};
 
   // 2018 UL JetID used as Run3 starting point (same family as upstream is2018=true)

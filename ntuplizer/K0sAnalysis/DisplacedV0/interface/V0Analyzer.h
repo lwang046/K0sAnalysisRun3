@@ -11,10 +11,10 @@
    - MagField: default UniformMagneticField(3.8 T) smoke fallback; optional ES
      IdealMagneticFieldRecord + TransientTrackBuilder/TransientTrackRecord
      via DisplacedV0Ntuple::useESMagneticField_
- Physics / Kalman logic and ntuple branches match upstream.
- AN-20-111 §6 tight cuts (pT>1, hits≥6, χ²/ndof, DCA<0.2, χ²_vtx<7,
- cosθ_pointing>0.99) remain in offline v0building/v0selections.py — same
- split as upstream.
+   - First-C slim (CDTE-30): storeKsOnly + float kinematics; drop unc/PCA/
+     daughter PxPyPz / Iso / PV-unc branches unused by v0builder
+ Physics / Kalman logic matches upstream; AN-20-111 §6 tight cuts remain in
+ offline v0building/v0selections.py.
 */
 #ifndef DisplacedV0_V0Analyzer_h
 #define DisplacedV0_V0Analyzer_h
@@ -85,66 +85,47 @@ private:
   static constexpr double jpsimass = 3.0969;
   // Root tree variable declarations
   static const unsigned nV0s_max = 50;
-  // beamspot position
-  double _beamSpotX{0.};
-  double _beamSpotY{0.};
-  double _beamSpotZ{0.};
-  // primary vertex position and position uncertainty
-  double _primaryVertexX{0.};
-  double _primaryVertexY{0.};
-  double _primaryVertexZ{0.};
-  double _primaryVertexXUnc{0.};
-  double _primaryVertexYUnc{0.};
-  double _primaryVertexZUnc{0.};
-  // variables from customized V0 fitter
+  // First-C default: only write Ks (type==1). Set storeKsOnly=False to keep Λ/Λ̄.
+  bool storeKsOnly_{true};
+  // beamspot / PV (float — GeV-scale precision is enough for cosθ_pointing)
+  float _beamSpotX{0.f};
+  float _beamSpotY{0.f};
+  float _beamSpotZ{0.f};
+  float _primaryVertexX{0.f};
+  float _primaryVertexY{0.f};
+  float _primaryVertexZ{0.f};
+  // variables from customized V0 fitter (kept set = v0builder / first-C consumers)
   unsigned _nV0s = 0;
-  double _V0InvMass[nV0s_max]{};
+  float _V0InvMass[nV0s_max]{};
   unsigned _V0Type[nV0s_max]{};
-  double _V0X[nV0s_max]{};
-  double _V0Y[nV0s_max]{};
-  double _V0Z[nV0s_max]{};
-  double _V0XUnc[nV0s_max]{};
-  double _V0YUnc[nV0s_max]{};
-  double _V0ZUnc[nV0s_max]{};
-  double _V0RPV[nV0s_max]{};
-  double _V0RBS[nV0s_max]{};
-  double _V0RPVUnc[nV0s_max]{};
-  double _V0RBSUnc[nV0s_max]{};
-  double _V0RPVSig[nV0s_max]{};
-  double _V0RBSSig[nV0s_max]{};
-  double _V0Px[nV0s_max]{};
-  double _V0Py[nV0s_max]{};
-  double _V0Pz[nV0s_max]{};
-  double _V0Pt[nV0s_max]{};
-  double _V0Eta[nV0s_max]{};
-  double _V0Phi[nV0s_max]{};
-  double _V0DCA[nV0s_max]{};
-  double _V0PCAX[nV0s_max]{};
-  double _V0PCAY[nV0s_max]{};
-  double _V0PCAZ[nV0s_max]{};
-  double _V0VtxNormChi2[nV0s_max]{};
-  double _V0PxPos[nV0s_max]{};
-  double _V0PyPos[nV0s_max]{};
-  double _V0PzPos[nV0s_max]{};
-  double _V0PtPos[nV0s_max]{};
-  double _V0PxNeg[nV0s_max]{};
-  double _V0PyNeg[nV0s_max]{};
-  double _V0PzNeg[nV0s_max]{};
-  double _V0PtNeg[nV0s_max]{};
-  double _V0EtaPos[nV0s_max]{};
-  double _V0EtaNeg[nV0s_max]{};
-  double _V0PhiPos[nV0s_max]{};
-  double _V0PhiNeg[nV0s_max]{};
-  double _V0NHitsPos[nV0s_max]{};
-  double _V0NHitsNeg[nV0s_max]{};
-  double _V0NormChi2Pos[nV0s_max]{};
-  double _V0NormChi2Neg[nV0s_max]{};
-  double _V0D0Pos[nV0s_max]{};
-  double _V0DzPos[nV0s_max]{};
-  double _V0D0Neg[nV0s_max]{};
-  double _V0DzNeg[nV0s_max]{};
-  double _V0IsoPos[nV0s_max]{};
-  double _V0IsoNeg[nV0s_max]{};
+  float _V0X[nV0s_max]{};
+  float _V0Y[nV0s_max]{};
+  float _V0Z[nV0s_max]{};
+  float _V0RPV[nV0s_max]{};
+  float _V0RBS[nV0s_max]{};
+  float _V0RPVSig[nV0s_max]{};
+  float _V0RBSSig[nV0s_max]{};
+  float _V0Px[nV0s_max]{};
+  float _V0Py[nV0s_max]{};
+  float _V0Pt[nV0s_max]{};
+  float _V0Eta[nV0s_max]{};
+  float _V0Phi[nV0s_max]{};
+  float _V0DCA[nV0s_max]{};
+  float _V0VtxNormChi2[nV0s_max]{};
+  float _V0PtPos[nV0s_max]{};
+  float _V0PtNeg[nV0s_max]{};
+  float _V0EtaPos[nV0s_max]{};
+  float _V0EtaNeg[nV0s_max]{};
+  float _V0PhiPos[nV0s_max]{};
+  float _V0PhiNeg[nV0s_max]{};
+  float _V0NHitsPos[nV0s_max]{};
+  float _V0NHitsNeg[nV0s_max]{};
+  float _V0NormChi2Pos[nV0s_max]{};
+  float _V0NormChi2Neg[nV0s_max]{};
+  float _V0D0Pos[nV0s_max]{};
+  float _V0DzPos[nV0s_max]{};
+  float _V0D0Neg[nV0s_max]{};
+  float _V0DzNeg[nV0s_max]{};
 
   unsigned debugcounter = 0;
 
@@ -163,7 +144,6 @@ public:
                                           const TransientTrackBuilder*) const;
   std::unordered_map<std::string, double> getTrackVariables(
       const reco::Track&, edm::Handle<reco::BeamSpot>, const MagneticField*);
-  double getTrackRelIso(const reco::Track&, const edm::Event&);
   std::unordered_map<std::string, double> VZeroFitter(
       const reco::Track&, const reco::Track&,
       edm::Handle<reco::BeamSpot>,
