@@ -4,12 +4,16 @@ Placeholder for one-file ``cmsRun`` only. CRAB production uses
 ``displacedV0_data_cfg.py`` (same DisplacedV0 sequence, ``maxEvents=-1``).
 
 Usage (from $CMSSW_BASE/src after cmsenv + scram b):
-  cmsRun DisplacedV0/python/test_data_onefile_cfg.py \\
+  cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \\
     inputFiles=file:/path/to/miniaod.root maxEvents=200
 
-  # Optional ES MagField path (requires MagneticField_cff):
-  cmsRun DisplacedV0/python/test_data_onefile_cfg.py \\
+  # Optional ES MagField + TransientTrackBuilder path:
+  cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \\
     inputFiles=file:/path/to/miniaod.root maxEvents=200 useESMagneticField=True
+
+  # Disable AN §5 dimuon pre-filter (debug / efficiency studies):
+  cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \\
+    inputFiles=file:/path/to/miniaod.root maxEvents=200 enableDimuonPreFilter=False
 
 Era: Run3. GT: auto:run3_data.
 Expect tree displacedV0Ntuple/events with nMuon, _nV0s, _V0InvMass peak near 0.498
@@ -27,7 +31,14 @@ options.register(
     False,
     VarParsing.multiplicity.singleton,
     VarParsing.varType.bool,
-    "Use IdealMagneticFieldRecord instead of OAEParametrizedMagneticField(3_8T)",
+    "Use IdealMagneticFieldRecord + TransientTrackBuilder instead of OAE 3_8T",
+)
+options.register(
+    "enableDimuonPreFilter",
+    True,
+    VarParsing.multiplicity.singleton,
+    VarParsing.varType.bool,
+    "AN §5 dimuon pre-filter ahead of V0Analyzer (disable for debugging)",
 )
 options.parseArguments()
 
@@ -50,8 +61,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, "auto:run3_data", "")
 # MagField / Geometry / TransientTrackBuilder:
 # Default (useESMagneticField=False): V0Analyzer builds OAE "3_8T" in C++ —
 # no MagField ES products required (see docs/cmsrun-smoke-test.md).
-# ES path: IdealMagneticFieldRecord token; TransientTrackBuilder is the
-# preferred follow-up if reco::TransientTrack(Track, MagField*) is deprecated.
+# ES path: IdealMagneticFieldRecord + TransientTrackBuilder tokens.
 if options.useESMagneticField:
     process.load("Configuration.StandardSequences.MagneticField_cff")
     process.load("Configuration.Geometry.GeometryRecoDB_cff")
@@ -61,11 +71,17 @@ process.TFileService = cms.Service(
     "TFileService", fileName=cms.string("displacedV0_data_smoke.root")
 )
 
-# CMSSW maps Package/python/foo.py → Package.foo (not Package.python.foo)
-from DisplacedV0.displacedV0_cfi import displacedV0Ntuple
+# CMSSW maps Subsystem/Package/python/foo.py → Subsystem.Package.foo
+from K0sAnalysis.DisplacedV0.displacedV0_cfi import displacedV0Ntuple
+from K0sAnalysis.DisplacedV0.dimuonPreFilter_cfi import dimuonPreFilter
 
 process.displacedV0Ntuple = displacedV0Ntuple.clone(
     isData=cms.bool(True),
     useESMagneticField=cms.bool(options.useESMagneticField),
 )
-process.p = cms.Path(process.displacedV0Ntuple)
+process.dimuonPreFilter = dimuonPreFilter.clone()
+
+if options.enableDimuonPreFilter:
+    process.p = cms.Path(process.dimuonPreFilter + process.displacedV0Ntuple)
+else:
+    process.p = cms.Path(process.displacedV0Ntuple)

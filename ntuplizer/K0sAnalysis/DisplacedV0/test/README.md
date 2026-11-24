@@ -1,10 +1,10 @@
 # CRAB / local tests
 
 **Full local smoke path (setup, package placement, MagField notes, branch checklist):**  
-[`docs/cmsrun-smoke-test.md`](../../../docs/cmsrun-smoke-test.md)
+[`docs/cmsrun-smoke-test.md`](../../../../docs/cmsrun-smoke-test.md)
 
 **First \(C(\Delta_{2D})\) submit recipe §3:**  
-[`docs/first-c-delta2d-recipe.md`](../../../docs/first-c-delta2d-recipe.md)
+[`docs/first-c-delta2d-recipe.md`](../../../../docs/first-c-delta2d-recipe.md)
 
 | File | Role |
 | --- | --- |
@@ -12,6 +12,7 @@
 | `../python/test_mc_onefile_cfg.py` | Local cmsRun MC smoke only |
 | `../python/displacedV0_data_cfg.py` | **Production** data pset for CRAB (wraps same sequence) |
 | `../python/displacedV0_mc_cfg.py` | **Production** MC pset for CRAB |
+| `../python/dimuonPreFilter_cfi.py` | AN §5 Path filter (ahead of ntuple; `enableDimuonPreFilter`) |
 | `crab_common.py` | Shared builders + DAS / golden / `storageSite` PLACEHOLDER |
 | `crab_data_2024.py` | Full Run2024D **Muon0** |
 | `crab_data_2024_muon1.py` | Full Run2024D **Muon1** twin |
@@ -46,29 +47,31 @@ export CRAB_STORAGE_SITE=T2_CH_CERN   # replace with *your* writeable site
 | MC DAS (FxFx Summer24) | `samples/sim_dy_m50_13p6.txt`, `conditions.md` |
 | Golden `lumiMask` | `samples/cert/README.md` |
 | `CRAB_STORAGE_SITE` | env on lxplus (see above) |
+| MiniAOD track API | `hasTrackDetails`/`pseudoTrack` + `lostTracks` tag (lxplus smoke) |
 
 ### Quick start (on a CMSSW + CRAB host)
 
 ```bash
-# after cmsrel / cmsenv and linking DisplacedV0 into $CMSSW_BASE/src/
+# after cmsrel / cmsenv and linking K0sAnalysis into $CMSSW_BASE/src/
+ln -s /path/to/K0sAnalysisRun3/ntuplizer/K0sAnalysis K0sAnalysis
 scram b -j8
 
 # Local one-file smoke (not CRAB):
-cmsRun DisplacedV0/python/test_data_onefile_cfg.py \
+cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \
   inputFiles=file:/path/to/miniaod.root maxEvents=200
-cmsRun DisplacedV0/python/test_mc_onefile_cfg.py \
+cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \
   inputFiles=file:/path/to/miniaodsim.root maxEvents=200
 
 # CRAB smoke → full (set CRAB_STORAGE_SITE first):
-crab submit -c DisplacedV0/test/crab_data_2024_smoke.py
-crab submit -c DisplacedV0/test/crab_mc_dy_smoke.py
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024_smoke.py
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy_smoke.py
 # then:
-crab submit -c DisplacedV0/test/crab_data_2024.py
-crab submit -c DisplacedV0/test/crab_data_2024_muon1.py
-crab submit -c DisplacedV0/test/crab_mc_dy.py
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024.py
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024_muon1.py
+crab submit -c K0sAnalysis/DisplacedV0/test/crab_mc_dy.py
 ```
 
-Import is `from DisplacedV0.displacedV0_cfi import ...` (CMSSW strips `python/`).
+Import is `from K0sAnalysis.DisplacedV0.displacedV0_cfi import ...` (CMSSW strips `python/`).
 
 **This Project VM has no CMSSW / CRAB** — configs are prep-only; run submits on lxplus/CMSLPC.
 

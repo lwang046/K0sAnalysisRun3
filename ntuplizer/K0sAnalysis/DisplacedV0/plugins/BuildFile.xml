@@ -1,4 +1,4 @@
 <library name="DisplacedV0_plugins" file="*.cc">
   <flags EDM_PLUGIN="1"/>
-  <use name="DisplacedV0"/>
+  <use name="K0sAnalysis/DisplacedV0"/>
 </library>

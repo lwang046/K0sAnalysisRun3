@@ -7,7 +7,7 @@ Before submit on lxplus:
   1. TODO-VERIFY DAS string (samples/data_muon_2024.txt, conditions.md)
   2. TODO-VERIFY golden lumiMask (samples/cert/README.md)
   3. export CRAB_STORAGE_SITE=<your writeable T2>   # required; placeholder otherwise
-  4. crab submit -c DisplacedV0/test/crab_data_2024.py
+  4. crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024.py
 """
 import os
 import sys

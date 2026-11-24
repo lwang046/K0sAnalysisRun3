@@ -9,8 +9,8 @@
  for Run3 Mass3p8 (+ optional OR companions).
 */
 
-#include "DisplacedV0/interface/TriggerAnalyzer.h"
-#include "DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/TriggerAnalyzer.h"
+#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
 
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "FWCore/Common/interface/TriggerNames.h"

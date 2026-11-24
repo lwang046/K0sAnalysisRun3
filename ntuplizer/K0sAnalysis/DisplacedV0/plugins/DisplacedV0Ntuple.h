@@ -28,6 +28,8 @@
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
@@ -57,8 +59,11 @@ public:
   edm::EDGetTokenT<edm::TriggerResults> triggerToken;
   edm::EDGetTokenT<GenEventInfoProduct> genEventInfoToken;
   edm::EDGetTokenT<std::vector<PileupSummaryInfo>> pileUpToken;
-  // Optional ES MagField (IdealMagneticFieldRecord). Used when useESMagneticField_.
+  // Optional ES products (IdealMagneticFieldRecord + TransientTrackRecord).
+  // Consumed when useESMagneticField_ — required for CMSSW_14_0_X / 15_0_X
+  // when reco::TransientTrack(Track, MagField*) is unavailable or deprecated.
   edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
+  edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> ttBuilderToken_;
 
   friend class V0Analyzer;
   friend class TriggerAnalyzer;

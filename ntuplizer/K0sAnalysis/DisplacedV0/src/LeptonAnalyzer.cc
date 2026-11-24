@@ -10,8 +10,8 @@
  Offline: exactly 2 medium, pT>30/25, |mμμ−mZ|<10 GeV (method §2.4).
 */
 
-#include "DisplacedV0/interface/LeptonAnalyzer.h"
-#include "DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/LeptonAnalyzer.h"
+#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
 
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"

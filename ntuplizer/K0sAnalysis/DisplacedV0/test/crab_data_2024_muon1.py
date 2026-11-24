@@ -4,7 +4,7 @@ Same era, lumiMask, pset, and output naming pattern as Muon0. Submit both PDs
 for the first C(Delta_2D) (see samples/data_muon_2024.txt).
 
   export CRAB_STORAGE_SITE=<your writeable T2>
-  crab submit -c DisplacedV0/test/crab_data_2024_muon1.py
+  crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024_muon1.py
 """
 import os
 import sys

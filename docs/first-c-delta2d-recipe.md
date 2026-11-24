@@ -22,7 +22,8 @@ fixture dry-run in §0).
 | Δ2D bins [cm] | `0,1,2,3,5,7,11,16,22,30,40,60,90,120` | `analysis/config_ksvars.py` → laurelin `_RPV` |
 | Low-Δ2D norm \(\mathcal{N}\) | `[0, 2]` cm | `config_ksvars.py` `normrange`; `fitting/variables/variable_norm_rpv.json` |
 | Sideband mass | `_mass` in `[0.44, 0.56]` (31 bins) | `config_ksvars.py` `bkgsideband` |
-| MagField (ntuple) | `useESMagneticField=False` (OAE `3_8T`) by default | `displacedV0_cfi.py` |
+| MagField (ntuple) | `useESMagneticField=False` (OAE `3_8T`) by default; ES MagField+TTBuilder via `True` | `displacedV0_cfi.py` |
+| Dimuon Path filter | `enableDimuonPreFilter=True` (2 medium, pT>30/25, \|mμμ−mZ\|<10) | production + smoke cfgs |
 
 ---
 
@@ -68,9 +69,7 @@ export SCRAM_ARCH=el8_amd64_gcc12   # verify for release
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cmsrel CMSSW_14_0_19                 # or 15_0_X if MiniAODv6 / 150X_
 cd CMSSW_14_0_19/src && cmsenv
-# Neon two-level layout (code worker may still update imports — see smoke doc)
-mkdir -p K0sAnalysis
-ln -s /path/to/K0sAnalysisRun3/ntuplizer/DisplacedV0 K0sAnalysis/DisplacedV0
+ln -s /path/to/K0sAnalysisRun3/ntuplizer/K0sAnalysis K0sAnalysis
 scram b -j8
 
 # One MiniAOD file each (xrdcp / dasgoclient)
@@ -79,8 +78,9 @@ cmsRun K0sAnalysis/DisplacedV0/python/test_data_onefile_cfg.py \
 cmsRun K0sAnalysis/DisplacedV0/python/test_mc_onefile_cfg.py \
   inputFiles=file:$PWD/dy_one.root maxEvents=200
 
-# Optional ES MagField path:
+# Optional ES MagField + TransientTrackBuilder path:
 # cmsRun … useESMagneticField=True
+# Optional: enableDimuonPreFilter=False to debug without AN §5 Path filter
 ```
 
 Exit: tree `displacedV0Ntuple/events` with muons + `_V0Type==1` mass near 0.498.
@@ -91,15 +91,14 @@ Exit: tree `displacedV0Ntuple/events` with muons + `_V0Type==1` mass near 0.498.
 
 Production psets (wrap the same DisplacedV0 sequence as the one-file smoke cfgs):
 
-- `ntuplizer/DisplacedV0/python/displacedV0_data_cfg.py`
-- `ntuplizer/DisplacedV0/python/displacedV0_mc_cfg.py`
+- `ntuplizer/K0sAnalysis/DisplacedV0/python/displacedV0_data_cfg.py`
+- `ntuplizer/K0sAnalysis/DisplacedV0/python/displacedV0_mc_cfg.py`
 
-Shared CRAB builders + PLACEHOLDER `storageSite`: `ntuplizer/DisplacedV0/test/crab_common.py`  
-(details: `ntuplizer/DisplacedV0/test/README.md`).
+Shared CRAB builders + PLACEHOLDER `storageSite`: `ntuplizer/K0sAnalysis/DisplacedV0/test/crab_common.py`  
+(details: `ntuplizer/K0sAnalysis/DisplacedV0/test/README.md`).
 
 ```bash
-# On lxplus / CMSLPC after cmsenv + scram b
-# (package at $CMSSW_BASE/src/K0sAnalysis/DisplacedV0 — or flat DisplacedV0 until imports catch up):
+# On lxplus / CMSLPC after cmsenv + scram b (K0sAnalysis linked into $CMSSW_BASE/src):
 #
 # 1) TODO-VERIFY DAS + golden JSON (samples/*.txt, samples/cert/README.md, conditions.md)
 # 2) Set your writeable site — do NOT invent a T2 in git:

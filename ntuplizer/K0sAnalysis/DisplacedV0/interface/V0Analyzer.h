@@ -7,9 +7,10 @@
 
  Adapted for K0sAnalysisRun3 slim package:
    - friend/owner class: DisplacedV0Ntuple (was multilep)
-   - include paths: DisplacedV0/... (was heavyNeutrino/multilep/...)
+   - include paths: K0sAnalysis/DisplacedV0/... (scram Subsystem/Package)
    - MagField: default OAEParametrizedMagneticField("3_8T"); optional ES
-     IdealMagneticFieldRecord via DisplacedV0Ntuple::useESMagneticField_
+     IdealMagneticFieldRecord + TransientTrackBuilder/TransientTrackRecord
+     via DisplacedV0Ntuple::useESMagneticField_
  Physics / Kalman logic and ntuple branches match upstream.
  AN-20-111 §6 tight cuts (pT>1, hits≥6, χ²/ndof, DCA<0.2, χ²_vtx<7,
  cosθ_pointing>0.99) remain in offline v0building/v0selections.py — same
@@ -19,7 +20,7 @@
 #define DisplacedV0_V0Analyzer_h
 
 // include other parts of the DisplacedV0 package
-#include "DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
 
 // system include files
 #include <memory>
@@ -64,6 +65,7 @@
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
 #include "TrackingTools/PatternTools/interface/ClosestApproachInRPhi.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 
 // data format include files
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -168,6 +170,10 @@ public:
   void analyze(const edm::Event&, const edm::EventSetup&, const reco::Vertex&);
   /** Clear per-event V0/PV state so Fill() does not reuse the previous event. */
   void clear();
+  /** Build TransientTrack via TransientTrackBuilder when non-null, else MagField*. */
+  reco::TransientTrack makeTransientTrack(const reco::Track&,
+                                          const MagneticField*,
+                                          const TransientTrackBuilder*) const;
   std::unordered_map<std::string, double> getTrackVariables(
       const reco::Track&, edm::Handle<reco::BeamSpot>, const MagneticField*);
   double getTrackRelIso(const reco::Track&, const edm::Event&);
@@ -176,6 +182,7 @@ public:
       edm::Handle<reco::BeamSpot>,
       const reco::Vertex&,
       const MagneticField*,
+      const TransientTrackBuilder*,
       const edm::Event&);
 };
 

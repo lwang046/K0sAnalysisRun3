@@ -4,7 +4,7 @@ Use this before the full ``crab_data_2024.py`` submit. Does not change DAS /
 lumiMask / storageSite rules — still TODO-VERIFY + set CRAB_STORAGE_SITE.
 
   export CRAB_STORAGE_SITE=<your writeable T2>
-  crab submit -c DisplacedV0/test/crab_data_2024_smoke.py
+  crab submit -c K0sAnalysis/DisplacedV0/test/crab_data_2024_smoke.py
 """
 import os
 import sys
