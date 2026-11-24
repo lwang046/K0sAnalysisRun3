@@ -6,7 +6,7 @@ import FWCore.ParameterSet.Config as cms
 displacedV0Ntuple = cms.EDAnalyzer(
     "DisplacedV0Ntuple",
     isData=cms.bool(True),
-    # MagField: False = OAEParametrizedMagneticField("3_8T") in V0Analyzer (smoke-friendly).
+    # MagField: False = UniformMagneticField(3.8 T) in V0Analyzer (smoke-friendly; no MagField ES).
     # True  = IdealMagneticFieldRecord + TransientTrackBuilder via esConsumes
     #         (load MagneticField_cff + Geometry + TransientTrackBuilder_cfi;
     #         see docs/cmsrun-smoke-test.md).

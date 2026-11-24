@@ -10,7 +10,7 @@
 <use name="SimDataFormats/GeneratorProducts"/>
 <use name="SimDataFormats/PileupSummaryInfo"/>
 <use name="MagneticField/Engine"/>
-<use name="MagneticField/ParametrizedEngine"/>
+<use name="MagneticField/UniformEngine"/>
 <use name="MagneticField/Records"/>
 <use name="TrackingTools/TransientTrack"/>
 <use name="TrackingTools/Records"/>

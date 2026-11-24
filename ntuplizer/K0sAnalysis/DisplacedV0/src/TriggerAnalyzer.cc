@@ -10,7 +10,7 @@
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/TriggerAnalyzer.h"
-#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/DisplacedV0Ntuple.h"
 
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "FWCore/Common/interface/TriggerNames.h"

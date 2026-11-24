@@ -9,7 +9,7 @@
    - Owner: DisplacedV0Ntuple* (was multilep*)
    - Tokens: ntuple_->packedCandidatesToken / lostTracksToken / beamSpotToken
    - Unused ele/muon getByToken calls from upstream analyze() dropped
-   - MagField: OAE "3_8T" by default; optional ES IdealMagneticFieldRecord
+   - MagField: UniformMagneticField(3.8 T) by default; optional ES IdealMagneticFieldRecord
      + TransientTrackBuilder (TransientTrackRecord) when useESMagneticField_
    - Tracks: hasTrackDetails() + pseudoTrack() (was bestTrack()); see TODO-VERIFY
    - CMSSW preselection unchanged (loose quality + IP sig>2; DCA/cylinder/
@@ -19,6 +19,9 @@
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
+#include "K0sAnalysis/DisplacedV0/interface/DisplacedV0Ntuple.h"
+
+#include "MagneticField/UniformEngine/interface/UniformMagneticField.h"
 
 #include <cmath>
 
@@ -135,8 +138,10 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
   //   useESMagneticField=True  → IdealMagneticFieldRecord + TransientTrackBuilder
   //                              via esConsumes (load MagneticField_cff + Geometry
   //                              + TransientTrackBuilder_cfi in the cfg).
-  //   useESMagneticField=False → OAEParametrizedMagneticField("3_8T") as upstream
-  //                              (no MagField ES products required for smoke).
+  //   useESMagneticField=False → UniformMagneticField(3.8 T) smoke fallback.
+  //                              (OAEParametrizedMagneticField lives under
+  //                              ParametrizedEngine/src/ and is a scram private
+  //                              header on CMSSW_15_0_X — do not include it.)
   // TODO-VERIFY on lxplus: both modes compile/link on CMSSW_14_0_X / 15_0_X;
   //   TransientTrackBuilder label "TransientTrackBuilder" still valid.
   std::unique_ptr<MagneticField> ownedBField;
@@ -146,7 +151,7 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
     bfield = &iSetup.getData(ntuple_->bFieldToken_);
     ttBuilder = &iSetup.getData(ntuple_->ttBuilderToken_);
   } else {
-    ownedBField = std::make_unique<OAEParametrizedMagneticField>("3_8T");
+    ownedBField = std::make_unique<UniformMagneticField>(3.8f);
     bfield = ownedBField.get();
   }
 

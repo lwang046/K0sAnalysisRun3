@@ -7,7 +7,7 @@
  (GenEventInfoProduct::weight + PileupSummaryInfo::getTrueNumInteractions).
  Full LHE/PS weight histograms still deferred.
 */
-#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/DisplacedV0Ntuple.h"
 #include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
 #include "K0sAnalysis/DisplacedV0/interface/TriggerAnalyzer.h"
 #include "K0sAnalysis/DisplacedV0/interface/LeptonAnalyzer.h"

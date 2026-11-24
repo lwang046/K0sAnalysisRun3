@@ -11,7 +11,7 @@
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/LeptonAnalyzer.h"
-#include "K0sAnalysis/DisplacedV0/plugins/DisplacedV0Ntuple.h"
+#include "K0sAnalysis/DisplacedV0/interface/DisplacedV0Ntuple.h"
 
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
