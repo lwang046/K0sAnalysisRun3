@@ -191,8 +191,9 @@ python3 mcvsdata_fill.py \
 
 Config reference: `config_ksvars.py` (bins, sideband `_mass`, `normrange=[0,2]`).
 Batch wrapper: `mcvsdata_submit.py` with `--config config_ksvars.py`.
-Output writes shared `norm_scale=[k, σ_k/k]`, `norm_shared_up/down` (correlated),
-and `norm_scale_alt_upper_*` when `--norm-stability-uppers` is set (CDTE-25).
+Output writes shared `norm_scale=[k, σ_k/k]`, `normshared_up/down` (correlated;
+single-token syst name for the plotter), and `norm_scale_alt_upper_*` when
+`--norm-stability-uppers` is set (CDTE-25).
 
 
 ---

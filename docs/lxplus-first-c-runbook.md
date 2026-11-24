@@ -224,7 +224,7 @@ python3 mcvsdata_fill.py \
 ```
 
 Config: `config_ksvars.py` (Δ2D bins, sideband `_mass`, `normrange=[0,2]`).
-Writes `norm_scale`, `norm_shared_up/down`, optional `norm_scale_alt_upper_*` (CDTE-25).
+Writes `norm_scale`, `normshared_up/down`, optional `norm_scale_alt_upper_*` (CDTE-25).
 
 
 ### J. SF export
