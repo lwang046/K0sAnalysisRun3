@@ -2,6 +2,8 @@ import FWCore.ParameterSet.Config as cms
 
 # Slim DisplacedV0 ntuple producer (Run3 / 2024 MiniAOD).
 # GTs: prefer autoCond aliases; pin exact strings in conditions.md on first CRAB.
+# Sol production schema (after #14/#15): one row per Path-selected Z→μμ event;
+# compact jets (no Jet_* arrays); restored daughter ηφ/dxy/dz + provenance.
 
 displacedV0Ntuple = cms.EDAnalyzer(
     "DisplacedV0Ntuple",
@@ -11,11 +13,11 @@ displacedV0Ntuple = cms.EDAnalyzer(
     #         (load MagneticField_cff + Geometry + TransientTrackBuilder_cfi;
     #         see docs/cmsrun-smoke-test.md).
     useESMagneticField=cms.bool(False),
-    # First-C / CDTE-30: write only Ks (V0Type==1). Set False to also store Λ/Λ̄.
+    # Write only Ks after Λ/Λ̄ classification (type==1). Set False for telperion.
     storeKsOnly=cms.bool(True),
-    # CDTE-31: skip tree Fill when _nV0s==0 (size win). Trade-off: nimloth loses
-    # zero-Ks DY control events; set False to keep them. Path dimuon filter stays.
-    skipFillIfNoV0=cms.bool(True),
+    # Sol / production: False → keep one row per baseline Z→μμ even if _nV0s==0
+    # (nimloth DY controls). Set True only for size-debug CRAB. Path filter stays.
+    skipFillIfNoV0=cms.bool(False),
     # DeepJet loose WP for passDeepJetLooseVeto (keep in sync with
     # analysis/config_defaults_run3.py DEEPJET_LOOSE_WP; TODO-VERIFY BTV JSON).
     deepJetLooseWP=cms.double(0.0494),

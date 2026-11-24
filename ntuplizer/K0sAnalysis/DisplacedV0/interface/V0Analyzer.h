@@ -11,9 +11,9 @@
    - MagField: default UniformMagneticField(3.8 T) smoke fallback; optional ES
      IdealMagneticFieldRecord + TransientTrackBuilder/TransientTrackRecord
      via DisplacedV0Ntuple::useESMagneticField_
-   - First-C slim (CDTE-30/31): storeKsOnly + float kinematics; drop unc/PCA/
-     daughter PxPyPz / Iso / PV-unc; defer RBS / mother ηφ / daughter ηφ /
-     D0Dz (trackingEff) until needed offline
+   - Sol schema (after CDTE-30/31): keep compact event layout (no Jet_* /
+     unused fat leaves); restore daughter ηφ/dxy/dz + packed/lost provenance;
+     parent ηφ + pointing cosines; neighbour charged-ΔR stubs (TODO)
  Physics / Kalman logic matches upstream; AN-20-111 §6 tight cuts remain in
  offline v0building/v0selections.py.
 */
@@ -86,7 +86,7 @@ private:
   static constexpr double jpsimass = 3.0969;
   // Root tree variable declarations
   static const unsigned nV0s_max = 50;
-  // First-C default: only write Ks (type==1). Set storeKsOnly=False to keep Λ/Λ̄.
+  // First-C / Sol default: only write Ks after Λ/Λ̄ classification.
   bool storeKsOnly_{true};
   // beamspot / PV (float — GeV-scale precision is enough for cosθ_pointing)
   float _beamSpotX{0.f};
@@ -95,7 +95,7 @@ private:
   float _primaryVertexX{0.f};
   float _primaryVertexY{0.f};
   float _primaryVertexZ{0.f};
-  // variables from customized V0 fitter (kept set = v0builder / first-C consumers)
+  // variables from customized V0 fitter
   unsigned _nV0s = 0;
   float _V0InvMass[nV0s_max]{};
   unsigned _V0Type[nV0s_max]{};
@@ -107,18 +107,49 @@ private:
   float _V0Px[nV0s_max]{};
   float _V0Py[nV0s_max]{};
   float _V0Pt[nV0s_max]{};
+  float _V0Eta[nV0s_max]{};
+  float _V0Phi[nV0s_max]{};
   float _V0DCA[nV0s_max]{};
   float _V0VtxNormChi2[nV0s_max]{};
+  float _V0CosPointingPV[nV0s_max]{};
+  float _V0CosPointingBS[nV0s_max]{};
   float _V0PtPos[nV0s_max]{};
   float _V0PtNeg[nV0s_max]{};
+  float _V0EtaPos[nV0s_max]{};
+  float _V0EtaNeg[nV0s_max]{};
+  float _V0PhiPos[nV0s_max]{};
+  float _V0PhiNeg[nV0s_max]{};
   float _V0NHitsPos[nV0s_max]{};
   float _V0NHitsNeg[nV0s_max]{};
   float _V0NormChi2Pos[nV0s_max]{};
   float _V0NormChi2Neg[nV0s_max]{};
+  float _V0D0Pos[nV0s_max]{};
+  float _V0DzPos[nV0s_max]{};
+  float _V0D0Neg[nV0s_max]{};
+  float _V0DzNeg[nV0s_max]{};
+  // Daughter provenance: 0=packedPFCandidates, 1=lostTracks; index in that collection
+  unsigned char _V0SrcPos[nV0s_max]{};
+  unsigned char _V0SrcNeg[nV0s_max]{};
+  int _V0IdxPos[nV0s_max]{};
+  int _V0IdxNeg[nV0s_max]{};
+  // Neighbour charged-track summary stubs (jet association not implemented yet)
+  float _V0NearestChgDRPos[nV0s_max]{};
+  float _V0NearestChgDRNeg[nV0s_max]{};
+  unsigned char _V0NearestChgStatusPos[nV0s_max]{};
+  unsigned char _V0NearestChgStatusNeg[nV0s_max]{};
+  int _V0NChgDR01Pos[nV0s_max]{};
+  int _V0NChgDR01Neg[nV0s_max]{};
 
   unsigned debugcounter = 0;
 
   DisplacedV0Ntuple* ntuple_{nullptr};
+
+  /** Selected MiniAOD track with provenance for daughter source leaves. */
+  struct SelTrack {
+    reco::Track track;
+    unsigned char src{0};  // 0=packed, 1=lost
+    int idx{-1};
+  };
 
 public:
   V0Analyzer(const edm::ParameterSet& iConfig, DisplacedV0Ntuple* ntuple);

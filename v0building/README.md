@@ -23,8 +23,11 @@ First-C slim schema (`storeKsOnly=True`, `skipFillIfNoV0=True`, float leaves):
 | `genWeight`, `Pileup_nTrue` | MC weights / PU (→ `_weight`, `_nTrueInt`) |
 | `run`, `luminosityBlock`, `event` | Event ID |
 
-**Dropped / deferred at source:** Λ/Λ̄ rows; empty-V0 events (`skipFillIfNoV0`);
-`_V0RBS*`; mother `_V0Eta/_V0Phi`; daughter η/φ (`_trackdR`); `_V0D0*`/`_V0Dz*`
+**Sol production (post-#15):** empty-V0 Z rows kept (`skipFillIfNoV0=False`);
+daughter η/φ + dxy/dz + packed/lost provenance restored; pointing cosines
+stored; neighbour charged-ΔR stubs status=0. Still omit Λ/Λ̄ rows when
+`storeKsOnly`; no full `Jet_*` / unused fat leaves. Legacy ntuples without
+restored leaves still work (η/φ/`_trackdR`/IPs → NaN hooks).
 (until trackingEff); unc/PCA/Iso/PxPyPz; unused muon leaves; `Muon_mass`;
 per-path `HLT_*`; `Jet_*` / `nJet` arrays.
 

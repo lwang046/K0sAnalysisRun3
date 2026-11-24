@@ -16,9 +16,10 @@
      Kalman χ²/mass windows as upstream). AN-20-111 §6 tight cuts stay offline
      in v0building/v0selections.py (same as K0sAnalysis).
    - Do not apply Δ2D/σ cut (matches AN §6 / upstream).
-   - CDTE-30/31 slim: storeKsOnly (default), float leaves; drop unc/PCA/Iso/
-     PxPyPz, RBS (+Sig), mother/daughter ηφ, D0/Dz (deferred to trackingEff);
-     skip getTrackRelIso (unused by first-C).
+   - Sol schema: float leaves; Ks-only after Λ classification; restore parent
+     ηφ + pointing cosines; daughter ηφ/dxy/dz + packed/lost source+index;
+     neighbour charged-ΔR stubs (status=0 until jet association exists).
+     Still drop unused fat: unc/PCA/Iso/daughter-PxPyPz / RBS distance.
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
@@ -27,6 +28,16 @@
 #include "MagneticField/UniformEngine/interface/UniformMagneticField.h"
 
 #include <cmath>
+#include <limits>
+
+namespace {
+float pointingCosine(double dx, double dy, double px, double py) {
+  const double r = std::sqrt(dx * dx + dy * dy);
+  const double p = std::sqrt(px * px + py * py);
+  if (r <= 0. || p <= 0.) return std::numeric_limits<float>::quiet_NaN();
+  return static_cast<float>((dx * px + dy * py) / (r * p));
+}
+}  // namespace
 
 // constructor //
 V0Analyzer::V0Analyzer(const edm::ParameterSet& iConfig, DisplacedV0Ntuple* ntuple)
@@ -40,13 +51,9 @@ V0Analyzer::~V0Analyzer() {}
 
 // beginJob //
 void V0Analyzer::beginJob(TTree* outputTree) {
-  // First-C slim schema: branches needed by v0selections + C(Δ2D) via laurelin
-  // (_RPV). Dropped / deferred (CDTE-30/31):
-  //   _V0{X,Y,Z}Unc, _V0R{PV,BS}Unc, _V0PCA{X,Y,Z}, _V0Pz,
-  //   _V0P{x,y,z}{Pos,Neg}, _V0Iso{Pos,Neg}, _primaryVertex{X,Y,Z}Unc,
-  //   _V0RBS(+Sig) — fill uses _RPV only; _V0Eta/_V0Phi mother;
-  //   daughter η/φ (_trackdR only); _V0D0*/_V0Dz* until trackingEff.
-  // Float (/F) is enough for GeV / cm kinematics at analysis precision.
+  // Sol compact schema: keep first-C leaves + restore expensive-to-recover
+  // daughter / pointing / provenance. Still omit unused fat (unc/PCA/Iso/
+  // daughter Cartesian / RBS distance — pointing cosines stored directly).
 
   outputTree->Branch("_beamSpotX", &_beamSpotX, "_beamSpotX/F");
   outputTree->Branch("_beamSpotY", &_beamSpotY, "_beamSpotY/F");
@@ -66,14 +73,37 @@ void V0Analyzer::beginJob(TTree* outputTree) {
   outputTree->Branch("_V0Px", &_V0Px, "_V0Px[_nV0s]/F");
   outputTree->Branch("_V0Py", &_V0Py, "_V0Py[_nV0s]/F");
   outputTree->Branch("_V0Pt", &_V0Pt, "_V0Pt[_nV0s]/F");
+  outputTree->Branch("_V0Eta", &_V0Eta, "_V0Eta[_nV0s]/F");
+  outputTree->Branch("_V0Phi", &_V0Phi, "_V0Phi[_nV0s]/F");
   outputTree->Branch("_V0DCA", &_V0DCA, "_V0DCA[_nV0s]/F");
   outputTree->Branch("_V0VtxNormChi2", &_V0VtxNormChi2, "_V0VtxNormChi2[_nV0s]/F");
+  outputTree->Branch("_V0CosPointingPV", &_V0CosPointingPV, "_V0CosPointingPV[_nV0s]/F");
+  outputTree->Branch("_V0CosPointingBS", &_V0CosPointingBS, "_V0CosPointingBS[_nV0s]/F");
   outputTree->Branch("_V0PtPos", &_V0PtPos, "_V0PtPos[_nV0s]/F");
   outputTree->Branch("_V0PtNeg", &_V0PtNeg, "_V0PtNeg[_nV0s]/F");
+  outputTree->Branch("_V0EtaPos", &_V0EtaPos, "_V0EtaPos[_nV0s]/F");
+  outputTree->Branch("_V0EtaNeg", &_V0EtaNeg, "_V0EtaNeg[_nV0s]/F");
+  outputTree->Branch("_V0PhiPos", &_V0PhiPos, "_V0PhiPos[_nV0s]/F");
+  outputTree->Branch("_V0PhiNeg", &_V0PhiNeg, "_V0PhiNeg[_nV0s]/F");
   outputTree->Branch("_V0NHitsPos", &_V0NHitsPos, "_V0NHitsPos[_nV0s]/F");
   outputTree->Branch("_V0NHitsNeg", &_V0NHitsNeg, "_V0NHitsNeg[_nV0s]/F");
   outputTree->Branch("_V0NormChi2Pos", &_V0NormChi2Pos, "_V0NormChi2Pos[_nV0s]/F");
   outputTree->Branch("_V0NormChi2Neg", &_V0NormChi2Neg, "_V0NormChi2Neg[_nV0s]/F");
+  outputTree->Branch("_V0D0Pos", &_V0D0Pos, "_V0D0Pos[_nV0s]/F");
+  outputTree->Branch("_V0DzPos", &_V0DzPos, "_V0DzPos[_nV0s]/F");
+  outputTree->Branch("_V0D0Neg", &_V0D0Neg, "_V0D0Neg[_nV0s]/F");
+  outputTree->Branch("_V0DzNeg", &_V0DzNeg, "_V0DzNeg[_nV0s]/F");
+  outputTree->Branch("_V0SrcPos", &_V0SrcPos, "_V0SrcPos[_nV0s]/b");
+  outputTree->Branch("_V0SrcNeg", &_V0SrcNeg, "_V0SrcNeg[_nV0s]/b");
+  outputTree->Branch("_V0IdxPos", &_V0IdxPos, "_V0IdxPos[_nV0s]/I");
+  outputTree->Branch("_V0IdxNeg", &_V0IdxNeg, "_V0IdxNeg[_nV0s]/I");
+  // Neighbour charged-track summary (stub until jet↔V0 association exists)
+  outputTree->Branch("_V0NearestChgDRPos", &_V0NearestChgDRPos, "_V0NearestChgDRPos[_nV0s]/F");
+  outputTree->Branch("_V0NearestChgDRNeg", &_V0NearestChgDRNeg, "_V0NearestChgDRNeg[_nV0s]/F");
+  outputTree->Branch("_V0NearestChgStatusPos", &_V0NearestChgStatusPos, "_V0NearestChgStatusPos[_nV0s]/b");
+  outputTree->Branch("_V0NearestChgStatusNeg", &_V0NearestChgStatusNeg, "_V0NearestChgStatusNeg[_nV0s]/b");
+  outputTree->Branch("_V0NChgDR01Pos", &_V0NChgDR01Pos, "_V0NChgDR01Pos[_nV0s]/I");
+  outputTree->Branch("_V0NChgDR01Neg", &_V0NChgDR01Neg, "_V0NChgDR01Neg[_nV0s]/I");
 }
 
 void V0Analyzer::clear() {
@@ -131,28 +161,41 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
   //   pat::PackedCandidate::hasTrackDetails() + pseudoTrack() remain the MiniAOD
   //   track API; lostTracks InputTag remains "lostTracks" (cfi default).
   //   Confirm on lxplus smoke that packedPFCandidates + lostTracks both yield tracks.
-  std::vector<reco::Track> seltracks;
-  for (const pat::PackedCandidate& pc : *packedCandidates) {
-    if (pc.hasTrackDetails()) {
-      reco::Track tr = pc.pseudoTrack();
-      std::unordered_map<std::string, double> temp = getTrackVariables(tr, beamSpotHandle, bfield);
-      if (temp["pass"] > 0.5) seltracks.push_back(tr);
+  std::vector<SelTrack> seltracks;
+  if (packedCandidates.isValid()) {
+    int idx = 0;
+    for (const pat::PackedCandidate& pc : *packedCandidates) {
+      if (pc.hasTrackDetails()) {
+        reco::Track tr = pc.pseudoTrack();
+        std::unordered_map<std::string, double> temp = getTrackVariables(tr, beamSpotHandle, bfield);
+        if (temp["pass"] > 0.5) {
+          seltracks.push_back(SelTrack{tr, /*src=*/0, idx});
+        }
+      }
+      ++idx;
     }
   }
-  for (const pat::PackedCandidate& pc : *lostTracks) {
-    if (pc.hasTrackDetails()) {
-      reco::Track tr = pc.pseudoTrack();
-      std::unordered_map<std::string, double> temp = getTrackVariables(tr, beamSpotHandle, bfield);
-      if (temp["pass"] > 0.5) seltracks.push_back(tr);
+  if (lostTracks.isValid()) {
+    int idx = 0;
+    for (const pat::PackedCandidate& pc : *lostTracks) {
+      if (pc.hasTrackDetails()) {
+        reco::Track tr = pc.pseudoTrack();
+        std::unordered_map<std::string, double> temp = getTrackVariables(tr, beamSpotHandle, bfield);
+        if (temp["pass"] > 0.5) {
+          seltracks.push_back(SelTrack{tr, /*src=*/1, idx});
+        }
+      }
+      ++idx;
     }
   }
 
   _nV0s = 0;
+  const float nanf = std::numeric_limits<float>::quiet_NaN();
 
   for (unsigned i = 0; i < seltracks.size(); i++) {
     for (unsigned j = i + 1; j < seltracks.size(); j++) {
-      const reco::Track tr1 = seltracks.at(i);
-      const reco::Track tr2 = seltracks.at(j);
+      const reco::Track& tr1 = seltracks.at(i).track;
+      const reco::Track& tr2 = seltracks.at(j).track;
       // temporary try catch for 2018D files giving a strange
       // "BasicSingleVertexState::could not invert weight matrix" error
       // that presumably has something to do with the kalman fitter
@@ -164,7 +207,7 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
       }
 
       if (temp.at("type") < 0.5) continue;
-      // storeKsOnly: skip Λ / Λ̄ rows (type 2/3) — first-C only needs Ks
+      // Sol: classify with Λ/Λ̄, then keep Ks-only rows when storeKsOnly
       if (storeKsOnly_ && temp.at("type") > 1.5) continue;
 
       _V0InvMass[_nV0s] = static_cast<float>(temp.at("invmass"));
@@ -177,14 +220,52 @@ void V0Analyzer::analyze(const edm::Event& iEvent,
       _V0Px[_nV0s] = static_cast<float>(temp.at("px"));
       _V0Py[_nV0s] = static_cast<float>(temp.at("py"));
       _V0Pt[_nV0s] = static_cast<float>(temp.at("pt"));
+      _V0Eta[_nV0s] = static_cast<float>(temp.at("eta"));
+      _V0Phi[_nV0s] = static_cast<float>(temp.at("phi"));
       _V0DCA[_nV0s] = static_cast<float>(temp.at("dca"));
       _V0VtxNormChi2[_nV0s] = static_cast<float>(temp.at("vtxnormchi2"));
+      _V0CosPointingPV[_nV0s] = pointingCosine(
+          temp.at("vtxx") - _primaryVertexX, temp.at("vtxy") - _primaryVertexY,
+          temp.at("px"), temp.at("py"));
+      _V0CosPointingBS[_nV0s] = pointingCosine(
+          temp.at("vtxx") - _beamSpotX, temp.at("vtxy") - _beamSpotY,
+          temp.at("px"), temp.at("py"));
       _V0PtPos[_nV0s] = static_cast<float>(temp.at("ptpos"));
       _V0PtNeg[_nV0s] = static_cast<float>(temp.at("ptneg"));
+      _V0EtaPos[_nV0s] = static_cast<float>(temp.at("etapos"));
+      _V0EtaNeg[_nV0s] = static_cast<float>(temp.at("etaneg"));
+      _V0PhiPos[_nV0s] = static_cast<float>(temp.at("phipos"));
+      _V0PhiNeg[_nV0s] = static_cast<float>(temp.at("phineg"));
       _V0NHitsPos[_nV0s] = static_cast<float>(temp.at("nhitspos"));
       _V0NHitsNeg[_nV0s] = static_cast<float>(temp.at("nhitsneg"));
       _V0NormChi2Pos[_nV0s] = static_cast<float>(temp.at("normchi2pos"));
       _V0NormChi2Neg[_nV0s] = static_cast<float>(temp.at("normchi2neg"));
+      _V0D0Pos[_nV0s] = static_cast<float>(temp.at("d0pos"));
+      _V0DzPos[_nV0s] = static_cast<float>(temp.at("dzpos"));
+      _V0D0Neg[_nV0s] = static_cast<float>(temp.at("d0neg"));
+      _V0DzNeg[_nV0s] = static_cast<float>(temp.at("dzneg"));
+
+      // Daughter provenance from charge assignment in VZeroFitter
+      if (tr1.charge() > 0. && tr2.charge() < 0) {
+        _V0SrcPos[_nV0s] = seltracks[i].src;
+        _V0IdxPos[_nV0s] = seltracks[i].idx;
+        _V0SrcNeg[_nV0s] = seltracks[j].src;
+        _V0IdxNeg[_nV0s] = seltracks[j].idx;
+      } else {
+        _V0SrcPos[_nV0s] = seltracks[j].src;
+        _V0IdxPos[_nV0s] = seltracks[j].idx;
+        _V0SrcNeg[_nV0s] = seltracks[i].src;
+        _V0IdxNeg[_nV0s] = seltracks[i].idx;
+      }
+
+      // TODO(Sol neighbour): match b-fragmentation charged selection once
+      // jet↔V0 association exists; until then status=0 and ΔR/count unset.
+      _V0NearestChgDRPos[_nV0s] = nanf;
+      _V0NearestChgDRNeg[_nV0s] = nanf;
+      _V0NearestChgStatusPos[_nV0s] = 0;
+      _V0NearestChgStatusNeg[_nV0s] = 0;
+      _V0NChgDR01Pos[_nV0s] = -1;
+      _V0NChgDR01Neg[_nV0s] = -1;
 
       ++_nV0s;
       if (_nV0s == nV0s_max) break;
@@ -405,12 +486,10 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(
   math::XYZTLorentzVector LambdaBarP4(totalP.x(), totalP.y(), totalP.z(), LambdaBarETot);
   double LambdaBarInvMass = LambdaBarP4.M();
 
-  // Mass window: storeKsOnly keeps any pair in the Ks window as type=1
-  // (do not discard when closer to Λ — first-C only needs the ππ hypothesis).
-  if (storeKsOnly_) {
-    if (std::abs(KsInvMass - ksmass) > 0.07) return outputmap;
-  } else if (std::abs(KsInvMass - ksmass) > 0.07 and std::abs(LambdaInvMass - lambdamass) > 0.05 and
-             std::abs(LambdaBarInvMass - lambdamass) > 0.05) {
+  // Sideband-inclusive mass windows (Ks ±70 MeV, Λ ±50 MeV). Always classify
+  // against Λ/Λ̄ (closest hypothesis wins); storeKsOnly filters type≠1 in analyze().
+  if (std::abs(KsInvMass - ksmass) > 0.07 and std::abs(LambdaInvMass - lambdamass) > 0.05 and
+      std::abs(LambdaBarInvMass - lambdamass) > 0.05) {
     return outputmap;
   }
 
@@ -425,12 +504,6 @@ std::unordered_map<std::string, double> V0Analyzer::VZeroFitter(
   outputmap["d0neg"] = negtrack.dxy(refPoint);
   outputmap["dzneg"] = negtrack.dz(refPoint);
   // Isolation intentionally not computed (unused by first-C / v0builder).
-
-  if (storeKsOnly_) {
-    outputmap["invmass"] = KsInvMass;
-    outputmap["type"] = 1.;
-    return outputmap;
-  }
 
   if (std::abs(KsInvMass - ksmass) < 0.07 and
       std::abs(KsInvMass - ksmass) < std::abs(LambdaInvMass - lambdamass) and

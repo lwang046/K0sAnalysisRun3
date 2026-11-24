@@ -7,9 +7,8 @@
 
  DeepFlavour discriminator labels match upstream; score = b+bb+lepb.
  Jet ID uses upstream 2018 tight / tightLepVeto as Run3 placeholder.
- CDTE-30: dropped Jet_phi / Jet_mass / Jet_hadronFlavour.
- CDTE-31: drop Jet_* arrays; store passDeepJetLooseVeto + nJetSel only
-   (same pT/η/jetId/WP cuts as v0builder --apply-dy-selection).
+ Compact scalars only (no Jet_* arrays): nJetSel, passDeepJetLooseVeto,
+ maxDeepJet among eligible jets, nJetSelStatus.
 */
 
 #include "K0sAnalysis/DisplacedV0/interface/JetAnalyzer.h"
@@ -26,6 +25,8 @@ JetAnalyzer::JetAnalyzer(const edm::ParameterSet& iConfig, DisplacedV0Ntuple* nt
 void JetAnalyzer::beginJob(TTree* outputTree) {
   outputTree->Branch("nJetSel", &_nJetSel, "nJetSel/i");
   outputTree->Branch("passDeepJetLooseVeto", &_passDeepJetLooseVeto, "passDeepJetLooseVeto/O");
+  outputTree->Branch("maxDeepJet", &_maxDeepJet, "maxDeepJet/F");
+  outputTree->Branch("nJetSelStatus", &_nJetSelStatus, "nJetSelStatus/b");
 }
 
 bool JetAnalyzer::jetIsTight(const pat::Jet& jet) const {
@@ -67,6 +68,8 @@ int JetAnalyzer::jetIdBits(const pat::Jet& jet) const {
 void JetAnalyzer::analyze(const edm::Event& iEvent) {
   _nJetSel = 0;
   _passDeepJetLooseVeto = true;
+  _maxDeepJet = -1.f;
+  _nJetSelStatus = 0;
 
   edm::Handle<std::vector<pat::Jet>> jets;
   iEvent.getByToken(ntuple_->jetToken, jets);
@@ -86,9 +89,13 @@ void JetAnalyzer::analyze(const edm::Event& iEvent) {
     const double lepb = jet.bDiscriminator("pfDeepFlavourJetTags:problepb");
     double deepFlav = b + bb + lepb;
     if (std::isnan(deepFlav)) deepFlav = 0.;
+    if (deepFlav > _maxDeepJet) {
+      _maxDeepJet = static_cast<float>(deepFlav);
+    }
     if (deepFlav > deepJetLooseWP_) {
       hasBtag = true;
     }
   }
+  _nJetSelStatus = (_nJetSel > 0) ? 1 : 0;
   _passDeepJetLooseVeto = !hasBtag;
 }

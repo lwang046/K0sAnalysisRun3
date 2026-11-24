@@ -4,11 +4,11 @@
  @2a132385). MiniAOD-only.
 
  genWeight / Pileup_nTrue: small hooks from upstream LheAnalyzer path
- (GenEventInfoProduct::weight + PileupSummaryInfo::getTrueNumInteractions).
+ (GenEventInfoProduct::weight + in-time BX PileupSummaryInfo::getTrueNumInteractions).
  Full LHE/PS weight histograms still deferred.
 
- CDTE-31: optional skipFillIfNoV0 (default true) — do not Fill when _nV0s==0.
- Trade-off: lose zero-Ks DY control rows in nimloth; Path dimuon filter kept.
+ Sol production default: skipFillIfNoV0=False — one row per baseline Z→μμ
+ event (Path dimuon filter) even when _nV0s==0.
 */
 #include "K0sAnalysis/DisplacedV0/interface/DisplacedV0Ntuple.h"
 #include "K0sAnalysis/DisplacedV0/interface/V0Analyzer.h"
@@ -25,7 +25,7 @@ DisplacedV0Ntuple::DisplacedV0Ntuple(const edm::ParameterSet& iConfig)
       useESMagneticField_(iConfig.getParameter<bool>("useESMagneticField")),
       skipFillIfNoV0_(iConfig.existsAs<bool>("skipFillIfNoV0")
                           ? iConfig.getParameter<bool>("skipFillIfNoV0")
-                          : true) {
+                          : false) {
   usesResource("TFileService");
 
   muonToken = consumes<std::vector<pat::Muon>>(iConfig.getParameter<edm::InputTag>("muons"));
@@ -89,7 +89,7 @@ void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup&
   nPV_ = vertices.isValid() ? static_cast<int>(vertices->size()) : 0;
   reco::Vertex pv = (vertices.isValid() && !vertices->empty()) ? vertices->front() : reco::Vertex();
 
-  // genWeight / true PU interactions (MC); data keeps defaults
+  // Signed genWeight / in-time true PU (MC); data keeps defaults
   genWeight_ = 1.f;
   Pileup_nTrue_ = -1.f;
   if (!isData_) {
@@ -100,9 +100,17 @@ void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup&
     }
     edm::Handle<std::vector<PileupSummaryInfo>> pileUpInfo;
     iEvent.getByToken(pileUpToken, pileUpInfo);
-    if (pileUpInfo.isValid() && !pileUpInfo->empty()) {
-      // getTrueNumInteractions is the same for all bunch crossings (upstream LheAnalyzer)
-      Pileup_nTrue_ = pileUpInfo->begin()->getTrueNumInteractions();
+    if (pileUpInfo.isValid()) {
+      for (const auto& pu : *pileUpInfo) {
+        if (pu.getBunchCrossing() == 0) {
+          Pileup_nTrue_ = pu.getTrueNumInteractions();
+          break;
+        }
+      }
+      // Fallback if BX=0 entry missing (true NI is BX-independent)
+      if (Pileup_nTrue_ < 0.f && !pileUpInfo->empty()) {
+        Pileup_nTrue_ = pileUpInfo->begin()->getTrueNumInteractions();
+      }
     }
   }
 
@@ -116,8 +124,8 @@ void DisplacedV0Ntuple::analyze(const edm::Event& iEvent, const edm::EventSetup&
     v0Analyzer_->clear();
   }
 
-  // First-C size: skip empty-V0 events (laurelin needs ≥1 Ks). Set
-  // skipFillIfNoV0=False to keep zero-Ks DY controls in nimloth.
+  // Optional size-debug: skip empty-V0 events. Production Sol default is False
+  // (one row per Path-selected Z→μμ event, including _nV0s==0).
   if (skipFillIfNoV0_ && v0Analyzer_->_nV0s == 0) {
     return;
   }

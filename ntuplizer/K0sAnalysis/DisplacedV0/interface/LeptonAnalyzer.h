@@ -7,8 +7,8 @@
 
  Run3 / K0sAnalysisRun3 adaptations:
    - Owner: DisplacedV0Ntuple* (was multilep*)
-   - CDTE-30/31 slim: branches used by v0builder --apply-dy-selection /
-     celeborn (pt/eta/phi/charge/mediumId); Muon_mass dropped (const offline)
+   - Muon_* arrays for offline DY; plus Dimuon_mass/pt/y for the baseline
+     OS medium pair when present (Sol Z-row schema)
 */
 #ifndef DisplacedV0_LeptonAnalyzer_h
 #define DisplacedV0_LeptonAnalyzer_h
@@ -29,6 +29,10 @@ private:
   float _Muon_phi[nMuon_max]{};
   int _Muon_charge[nMuon_max]{};
   bool _Muon_mediumId[nMuon_max]{};
+  // Baseline Z→μμ scalars (NaN when no valid OS medium pair)
+  float _Dimuon_mass{-1.f};
+  float _Dimuon_pt{-1.f};
+  float _Dimuon_y{-1.f};
   DisplacedV0Ntuple* ntuple_{nullptr};
 
 public:

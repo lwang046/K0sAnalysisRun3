@@ -36,7 +36,9 @@ DEEPJET_LOOSE_WP_PLACEHOLDER = 0.0494
 
 
 def _dimuon_mass(branches):
-  """Dimuon invariant mass from Muon_* branches (padded; invalid → 0)."""
+  """Dimuon invariant mass: prefer Sol ``Dimuon_mass``, else from Muon_*."""
+  if "Dimuon_mass" in branches.fields:
+    return ak.fill_none(branches["Dimuon_mass"], 0.0)
   pt = ak.pad_none(branches["Muon_pt"], 2, axis=1)
   eta = ak.pad_none(branches["Muon_eta"], 2, axis=1)
   phi = ak.pad_none(branches["Muon_phi"], 2, axis=1)
@@ -412,12 +414,23 @@ if __name__ == "__main__":
     if "_V0IsoPos" in branches.fields:
       out["_isoPos"] = ak.flatten(branches["_V0IsoPos"][mask])
       out["_isoNeg"] = ak.flatten(branches["_V0IsoNeg"][mask])
-    # Schema hooks for nearest charged-track distance in the matched jet
-    # (trackingEff nuisance). Not computed yet: needs jet↔V0 matching that
-    # JetAnalyzer does not provide. Fill NaN — do not invent physics values.
-    # TODO(CDTE-26): implement after jet-track association lands in DisplacedV0.
-    out["_trkNearestJetDistPos"] = nan_hook
-    out["_trkNearestJetDistNeg"] = nan_hook
+    # Neighbour charged-track ΔR in the matched jet (trackingEff / b-frag).
+    # Prefer Sol `_V0NearestChgDR*` when status>0; else NaN hooks.
+    # TODO(Sol neighbour): implement once jet↔V0 association + charged
+    # selection matching b-fragmentation exist in DisplacedV0.
+    if (
+      "_V0NearestChgDRPos" in branches.fields
+      and "_V0NearestChgStatusPos" in branches.fields
+    ):
+      st_pos = ak.flatten(branches["_V0NearestChgStatusPos"][mask])
+      st_neg = ak.flatten(branches["_V0NearestChgStatusNeg"][mask])
+      dr_pos = ak.flatten(branches["_V0NearestChgDRPos"][mask])
+      dr_neg = ak.flatten(branches["_V0NearestChgDRNeg"][mask])
+      out["_trkNearestJetDistPos"] = ak.where(st_pos > 0, dr_pos, nan_hook)
+      out["_trkNearestJetDistNeg"] = ak.where(st_neg > 0, dr_neg, nan_hook)
+    else:
+      out["_trkNearestJetDistPos"] = nan_hook
+      out["_trkNearestJetDistNeg"] = nan_hook
     ones = branches["_V0Pt"][mask] > -1.0
     out["_runNb"] = ak.flatten(ones * branches["_runNb"])
     out["_lumiBlock"] = ak.flatten(ones * branches["_lumiBlock"])
