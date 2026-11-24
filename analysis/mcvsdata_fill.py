@@ -516,8 +516,10 @@ if __name__=='__main__':
         print('  Norm stability upper={:.4g}: k={:.6g} (relerr={:.3g})'.format(
           hi, alt_scale, alt_rel))
 
-    # Apply shared scale; keep bkgfit as fit-only; add separate norm_shared_* 
+    # Apply shared scale; keep bkgfit as fit-only; add separate normshared_*
     # variations that are 100% correlated across bins (method §2.5 / CDTE-25).
+    # Name must be a single token (no '_' inside) so mcvsdataplotter loadobjects
+    # rsplit('_',1) after stripping _up/_down keeps sample label intact.
     for simdict in simin:
       simdict['counts'] = simdict['counts'] * scale
       simdict['staterrors'] = simdict['staterrors'] * scale
@@ -527,8 +529,8 @@ if __name__=='__main__':
         simdict['variations'][key] = val * scale
       # Dedicated shared-normalization envelope (correlated across all Δ2D bins).
       normunc = simdict['counts'] * scalerelerr
-      simdict['variations']['norm_shared_up'] = simdict['counts'] + normunc
-      simdict['variations']['norm_shared_down'] = simdict['counts'] - normunc
+      simdict['variations']['normshared_up'] = simdict['counts'] + normunc
+      simdict['variations']['normshared_down'] = simdict['counts'] - normunc
 
   # for normmode 'eventyield', scale using event weights
   if args.normmode=='eventyield':

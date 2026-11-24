@@ -23,8 +23,9 @@ the sideband histogram x-range (`peak_halfwidth_frac=0.25`); override via
 `count_peak(..., peak_halfwidth=…)` or `mcvsdata_fill.py --peak-halfwidth-frac`.
 
 Low-\(\Delta_{2D}\) normalization (`--normmode range`) writes a shared scale
-`norm_scale = [k, σ_k/k]` and dedicated `norm_shared_up/down` histogram
-variations (100% correlated across bins). Reference-interval stability:
+`norm_scale = [k, σ_k/k]` and dedicated `normshared_up/down` histogram
+variations (100% correlated across bins; single-token name for the plotter).
+Reference-interval stability:
 
 ```bash
 python3 analysis/mcvsdata_fill.py ... --normmode range \
