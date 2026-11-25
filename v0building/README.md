@@ -48,11 +48,24 @@ NaN schema hooks).
 ### Usage
 
 ```bash
+# Single ROOT file (unchanged)
 python3 v0builder.py -i displacedv0_ntuple.root -o selected.root \
   --apply-dy-selection --selection legacy
 # DeepJet WP only matters for legacy Jet_* ntuples; CDTE-31 uses the scalar:
 #   --deepjet-loose-wp 0.0494   or  --no-bveto
+
+# Text filelist (one EOS/local .root path per line) — no hadd of CRAB shards
+python3 v0builder.py -i dy_crab_files.txt -o v0sel_dy.root \
+  --apply-dy-selection --no-bveto
+
+# Multiple files and/or globs
+python3 v0builder.py -i file1.root file2.root 'dir/*.root' -o selected.root
 ```
+
+`-i` accepts a single ROOT file, a text filelist (`#` comments / blank lines
+skipped), multiple paths, and shell globs. Inputs are processed **file-by-file**
+(TChain-like over a list; peak RAM ~ one shard + selected output) so CRAB
+ntuples are not merged on disk.
 
 Upstream `blackJackAndHookers` layout is still accepted as a fallback.
 Merge helpers (`merge.py`, `mergeeras.py`, …) are ported as-is.
