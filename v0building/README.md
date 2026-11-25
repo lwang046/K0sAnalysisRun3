@@ -63,8 +63,9 @@ python3 v0builder.py -i file1.root file2.root 'dir/*.root' -o selected.root
 ```
 
 `-i` accepts a single ROOT file, a text filelist (`#` comments / blank lines
-skipped), multiple paths, and shell globs. Events are read with
-`uproot.concatenate` (TChain-like) so inputs are not merged on disk.
+skipped), multiple paths, and shell globs. Inputs are processed **file-by-file**
+(TChain-like over a list; peak RAM ~ one shard + selected output) so CRAB
+ntuples are not merged on disk.
 
 Upstream `blackJackAndHookers` layout is still accepted as a fallback.
 Merge helpers (`merge.py`, `mergeeras.py`, …) are ported as-is.

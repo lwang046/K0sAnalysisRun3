@@ -20,8 +20,9 @@
 #   - a single ROOT file
 #   - a text filelist (one path per line; blank lines and # comments ignored)
 #   - multiple ROOT paths and/or shell globs
-# Events are streamed with uproot (TChain-like concatenate) so CRAB shards
-# on EOS need not be hadd'ed first. Example:
+# Events are read file-by-file (TChain-like over a filelist/glob) so CRAB
+# shards on EOS need not be hadd'ed first; peak RAM stays near one shard plus
+# the selected output. Example:
 #   python3 v0builder.py -i dy_files.txt -o v0sel_dy.root --apply-dy-selection
 
 from __future__ import annotations
@@ -162,12 +163,306 @@ def _discover_tree(fkeys: list[str], treename: str):
 
 
 def _accumulate_hist(acc, hist):
-  """Sum TH1-like objects across input files (MC counters)."""
+  """Sum TH1-like objects across input files (MC counters).
+
+  Uproot TH1 models do not implement ``+``; convert via ``to_numpy`` and sum
+  bin contents (no extra hist/boost-histogram dependency).
+  """
   if hist is None:
     return acc
+  values, edges = hist.to_numpy(flow=False)
+  values = np.asarray(values, dtype=np.float64)
+  edges = np.asarray(edges, dtype=np.float64)
+  # Preserve underflow/overflow when present (values(flow=True)).
+  try:
+    flow = np.asarray(hist.values(flow=True), dtype=np.float64)
+    under = float(flow[0])
+    over = float(flow[-1])
+  except Exception:
+    under = 0.0
+    over = 0.0
   if acc is None:
-    return hist
-  return acc + hist
+    return {
+      "values": values.copy(),
+      "edges": edges,
+      "underflow": under,
+      "overflow": over,
+    }
+  if acc["values"].shape != values.shape or not np.allclose(acc["edges"], edges):
+    raise ValueError("histogram binning mismatch across input files")
+  acc["values"] = acc["values"] + values
+  acc["underflow"] += under
+  acc["overflow"] += over
+  return acc
+
+
+def _hist_for_write(acc):
+  """Convert accumulated hist dict to an uproot-writable (counts, edges) pair.
+
+  Interior bins are written as-is. Under/overflow are summed in ``acc`` for
+  bookkeeping; embedding them needs a full TH1 writer and is left aside so
+  bin contents stay correct without hist/boost-histogram.
+  """
+  if acc is None:
+    return None
+  return (acc["values"], acc["edges"])
+
+
+def _merge_tree_dicts(chunks: list[dict]) -> dict:
+  """Concatenate per-chunk output tree dicts (awkward / numpy columns)."""
+  chunks = [c for c in chunks if c]
+  if not chunks:
+    return {}
+  keys = list(chunks[0].keys())
+  out = {}
+  for key in keys:
+    parts = [c[key] for c in chunks if key in c]
+    if not parts:
+      continue
+    try:
+      out[key] = ak.concatenate(parts)
+    except Exception:
+      out[key] = np.concatenate([np.asarray(p) for p in parts])
+  return out
+
+
+def build_selected_trees(
+  branches,
+  layout: str,
+  selection_name: str,
+  apply_dy: bool,
+  deepjet_wp: float | None,
+  isdata: bool,
+  verbose: bool = True,
+):
+  """Run rename / DY / AN §6 selection and fill output tree dicts for one chunk."""
+  # --- normalize event / weight / ID branch names to a common internal schema ---
+  if layout == "displacedv0":
+    rename = {}
+    if "run" in branches.fields:
+      rename["run"] = "_runNb"
+    if "luminosityBlock" in branches.fields:
+      rename["luminosityBlock"] = "_lumiBlock"
+    if "event" in branches.fields:
+      rename["event"] = "_eventNb"
+    for src, dst in rename.items():
+      branches[dst] = branches[src]
+
+    if "genWeight" in branches.fields:
+      branches["_weight"] = branches["genWeight"]
+      isdata = False
+    elif "_weight" not in branches.fields:
+      isdata = True
+    if "Pileup_nTrue" in branches.fields:
+      branches["_nTrueInt"] = branches["Pileup_nTrue"]
+
+  # DisplacedV0 already stores _V0RPVSig / _V0RBSSig (new naming)
+  vnametype = "new"
+  if "_V0RPVSig" not in branches.fields and "_V0RSigPV" in branches.fields:
+    vnametype = "old"
+  if vnametype == "new":
+    rpvsigkey = "RPVSig"
+    rbssigkey = "RBSSig"
+  else:
+    rpvsigkey = "RSigPV"
+    rbssigkey = "RSigBS"
+    branches["_V0NormChi2Pos"] = branches["_V0PtPos"] * 0.0
+    branches["_V0NormChi2Neg"] = branches["_V0PtNeg"] * 0.0
+
+  n_before = len(branches)
+  if apply_dy and layout == "displacedv0":
+    if verbose:
+      print("Applying AN §5 DY selection on DisplacedV0 branches...")
+    evmask, mll = dy_event_mask(branches, deepjet_wp=deepjet_wp)
+    n_after = int(np.sum(evmask))
+    if verbose:
+      print("  Events before: {}".format(n_before))
+      print("  Events after:  {}".format(n_after))
+    branches = branches[evmask]
+    mll = mll[evmask]
+  elif layout == "displacedv0" and "nMuon" in branches.fields:
+    mll = _dimuon_mass(branches)
+    n_after = n_before
+  else:
+    mll = branches["_nimloth_Mll"] if "_nimloth_Mll" in branches.fields else None
+    n_after = n_before
+
+  if layout == "displacedv0":
+    branches["_nimloth_Mll"] = mll if mll is not None else ak.zeros_like(branches["_runNb"])
+    branches["_nimloth_nJets"] = count_jets(branches)
+    if "Muon_pt" in branches.fields:
+      branches["_celeborn_lPt"] = branches["Muon_pt"]
+      branches["_celeborn_lEta"] = branches["Muon_eta"]
+      branches["_celeborn_lPhi"] = branches["Muon_phi"]
+      branches["_celeborn_lCharge"] = branches["Muon_charge"]
+
+  ksmask = branches["_V0Type"] == 1
+  lmask = (branches["_V0Type"] == 2) | (branches["_V0Type"] == 3)
+
+  if verbose:
+    print("Constructing auxiliary variables")
+  cospointingPV = cospointing(branches, reference="primaryVertex")
+  cospointingBS = cospointing(branches, reference="beamSpot")
+  ptSum = branches["_V0PtPos"] + branches["_V0PtNeg"]
+
+  has_daughter_angles = all(
+    k in branches.fields
+    for k in ("_V0EtaPos", "_V0EtaNeg", "_V0PhiPos", "_V0PhiNeg")
+  )
+  if has_daughter_angles:
+    posp4 = vector.zip(
+      {
+        "pt": branches["_V0PtPos"],
+        "eta": branches["_V0EtaPos"],
+        "phi": branches["_V0PhiPos"],
+        "mass": 0.0,
+      }
+    )
+    negp4 = vector.zip(
+      {
+        "pt": branches["_V0PtNeg"],
+        "eta": branches["_V0EtaNeg"],
+        "phi": branches["_V0PhiNeg"],
+        "mass": 0.0,
+      }
+    )
+    trackdR = posp4.deltaR(negp4)
+  else:
+    trackdR = None
+
+  if verbose:
+    print("Performing selections")
+  extra = {"cospointingPV": cospointingPV, "cospointingBS": cospointingBS}
+  (selmask, allmasks) = selection(branches, selection_name, extra=extra, cutflow=True)
+  if verbose:
+    print("Selection summary:")
+    print("  Before selection: {} candidates".format(ak.count(selmask)))
+    for maskname, mask in allmasks.items():
+      print("  - {}: {}".format(maskname, np.sum(mask)))
+    print("  -> Candidates passing all selections: {}".format(np.sum(selmask)))
+
+  nimloth = {}
+  nimlothvars = [
+    "_nimloth_Mll",
+    "_nimloth_nJets",
+    "_beamSpotX",
+    "_beamSpotY",
+    "_beamSpotZ",
+    "_primaryVertexX",
+    "_primaryVertexY",
+    "_primaryVertexZ",
+    "_runNb",
+    "_lumiBlock",
+    "_eventNb",
+  ]
+  if not isdata:
+    nimlothvars += ["_weight", "_nTrueInt"]
+  for var in nimlothvars:
+    if var in branches.fields:
+      nimloth[var] = branches[var]
+
+  celeborn = {}
+  if "_celeborn_lPt" in branches.fields:
+    for var in (
+      "_celeborn_lPt",
+      "_celeborn_lEta",
+      "_celeborn_lPhi",
+      "_celeborn_lCharge",
+    ):
+      celeborn[var] = ak.flatten(branches[var])
+    nlep = ak.num(branches["_celeborn_lPt"], axis=1)
+    celeborn["_runNb"] = np.repeat(ak.to_numpy(branches["_runNb"]), ak.to_numpy(nlep))
+    celeborn["_lumiBlock"] = np.repeat(
+      ak.to_numpy(branches["_lumiBlock"]), ak.to_numpy(nlep)
+    )
+    celeborn["_eventNb"] = np.repeat(ak.to_numpy(branches["_eventNb"]), ak.to_numpy(nlep))
+    if not isdata:
+      celeborn["_weight"] = np.repeat(ak.to_numpy(branches["_weight"]), ak.to_numpy(nlep))
+      if "_nTrueInt" in branches.fields:
+        celeborn["_nTrueInt"] = np.repeat(
+          ak.to_numpy(branches["_nTrueInt"]), ak.to_numpy(nlep)
+        )
+
+  def fill_v0_tree(mask):
+    out = {}
+    out["_mass"] = ak.flatten(branches["_V0InvMass"][mask])
+    out["_vertexX"] = ak.flatten(branches["_V0X"][mask])
+    out["_vertexY"] = ak.flatten(branches["_V0Y"][mask])
+    out["_vertexZ"] = ak.flatten(branches["_V0Z"][mask])
+    out["_RPV"] = ak.flatten(branches["_V0RPV"][mask])
+    if "_V0RBS" in branches.fields:
+      out["_RBS"] = ak.flatten(branches["_V0RBS"][mask])
+    out["_RPVSig"] = ak.flatten(branches["_V0" + rpvsigkey][mask])
+    if "_V0" + rbssigkey in branches.fields:
+      out["_RBSSig"] = ak.flatten(branches["_V0" + rbssigkey][mask])
+    out["_pt"] = ak.flatten(branches["_V0Pt"][mask])
+    out["_ptSum"] = ak.flatten(ptSum[mask])
+    if "_V0Eta" in branches.fields:
+      out["_eta"] = ak.flatten(branches["_V0Eta"][mask])
+    if "_V0Phi" in branches.fields:
+      out["_phi"] = ak.flatten(branches["_V0Phi"][mask])
+    out["_nHitsPos"] = ak.flatten(branches["_V0NHitsPos"][mask])
+    out["_nHitsNeg"] = ak.flatten(branches["_V0NHitsNeg"][mask])
+    out["_ptPos"] = ak.flatten(branches["_V0PtPos"][mask])
+    out["_ptNeg"] = ak.flatten(branches["_V0PtNeg"][mask])
+    out["_normChi2Pos"] = ak.flatten(branches["_V0NormChi2Pos"][mask])
+    out["_normChi2Neg"] = ak.flatten(branches["_V0NormChi2Neg"][mask])
+    flat_ones = ak.flatten(branches["_V0Pt"][mask] > -1.0)
+    nan_hook = ak.full_like(ak.values_astype(flat_ones, np.float64), np.nan)
+    if trackdR is not None:
+      out["_trackdR"] = ak.flatten(trackdR[mask])
+    else:
+      out["_trackdR"] = nan_hook
+    if "_V0D0Pos" in branches.fields:
+      out["_d0Pos"] = ak.flatten(branches["_V0D0Pos"][mask])
+      out["_dzPos"] = ak.flatten(branches["_V0DzPos"][mask])
+      out["_d0Neg"] = ak.flatten(branches["_V0D0Neg"][mask])
+      out["_dzNeg"] = ak.flatten(branches["_V0DzNeg"][mask])
+    if "_V0IsoPos" in branches.fields:
+      out["_isoPos"] = ak.flatten(branches["_V0IsoPos"][mask])
+      out["_isoNeg"] = ak.flatten(branches["_V0IsoNeg"][mask])
+    if (
+      "_V0NearestChgDRPos" in branches.fields
+      and "_V0NearestChgStatusPos" in branches.fields
+    ):
+      st_pos = ak.flatten(branches["_V0NearestChgStatusPos"][mask])
+      st_neg = ak.flatten(branches["_V0NearestChgStatusNeg"][mask])
+      dr_pos = ak.flatten(branches["_V0NearestChgDRPos"][mask])
+      dr_neg = ak.flatten(branches["_V0NearestChgDRNeg"][mask])
+      out["_trkNearestJetDistPos"] = ak.where(st_pos > 0, dr_pos, nan_hook)
+      out["_trkNearestJetDistNeg"] = ak.where(st_neg > 0, dr_neg, nan_hook)
+    else:
+      out["_trkNearestJetDistPos"] = nan_hook
+      out["_trkNearestJetDistNeg"] = nan_hook
+    ones = branches["_V0Pt"][mask] > -1.0
+    out["_runNb"] = ak.flatten(ones * branches["_runNb"])
+    out["_lumiBlock"] = ak.flatten(ones * branches["_lumiBlock"])
+    out["_eventNb"] = ak.flatten(ones * branches["_eventNb"])
+    if not isdata:
+      out["_weight"] = ak.flatten(ones * branches["_weight"])
+      if "_nTrueInt" in branches.fields:
+        out["_nTrueInt"] = ak.flatten(ones * branches["_nTrueInt"])
+    return out
+
+  laurelinmask = ksmask & selmask
+  telperionmask = lmask & selmask
+  n_ks = int(np.sum(laurelinmask))
+  n_lam = int(np.sum(telperionmask))
+  if verbose:
+    print("Found {} K0s candidates".format(n_ks))
+    print("Found {} Lambda candidates".format(n_lam))
+
+  return {
+    "nimloth": nimloth,
+    "celeborn": celeborn,
+    "laurelin": fill_v0_tree(laurelinmask),
+    "telperion": fill_v0_tree(telperionmask),
+    "isdata": isdata,
+    "n_before": n_before,
+    "n_after": n_after,
+    "n_ks": n_ks,
+    "n_lam": n_lam,
+  }
 
 
 def _dimuon_mass(branches):
@@ -267,7 +562,7 @@ if __name__ == "__main__":
     description=(
       "Perform V0 candidate selection (Run3). "
       "Accepts a single ROOT file, a text filelist, multiple files, and/or globs "
-      "via -i (TChain-like; no hadd of CRAB shards required)."
+      "via -i (file-by-file / TChain-like; no hadd of CRAB shards required)."
     )
   )
   parser.add_argument(
@@ -279,7 +574,7 @@ if __name__ == "__main__":
     help=(
       "Input ROOT file(s), glob(s), and/or a text filelist "
       "(one .root path per line; # comments / blank lines skipped). "
-      "Events are read with uproot.concatenate (TChain-like) without merging "
+      "Files are processed one at a time (bounded RAM) without merging "
       "inputs on disk. Example: -i dy_crab_files.txt"
     ),
   )
@@ -345,8 +640,8 @@ if __name__ == "__main__":
     origoutputfile = args.outputfile
     args.outputfile = tmpfile.replace(".root", "_out.root")
 
-  # Discover tree/layout from the first file; read all files as a TChain-like
-  # concatenate so EOS CRAB shards need not be hadd'ed.
+  # Discover tree/layout from the first file; process shards one-by-one so
+  # EOS CRAB outputs need not be hadd'ed and peak RAM stays near one file.
   with uproot.open(input_files[0]) as f0:
     fkeys0 = [key.split(";")[0] for key in f0.keys()]
     resolved_treename, layout = _discover_tree(fkeys0, args.treename)
@@ -355,6 +650,7 @@ if __name__ == "__main__":
   hcounter = None
   ntrueint_hist = None
   total_entries = 0
+  file_entries: list[int] = []
   for fpath in input_files:
     with uproot.open(fpath) as f:
       fkeys = [key.split(";")[0] for key in f.keys()]
@@ -369,7 +665,9 @@ if __name__ == "__main__":
             this_tree, this_layout, resolved_treename, layout, fpath
           )
         )
-      total_entries += f[resolved_treename].num_entries
+      nent = int(f[resolved_treename].num_entries)
+      file_entries.append(nent)
+      total_entries += nent
 
       if layout == "upstream":
         hcounterkey = "blackJackAndHookers/hCounter"
@@ -389,263 +687,96 @@ if __name__ == "__main__":
     hcounter = None
     ntrueint_hist = None
 
-  entry_stop = None
-  if args.nevents > 0 and args.nevents < total_entries:
-    entry_stop = args.nevents
-  msg = "Tree is found to have {} entries across {} file(s)".format(
-    total_entries, len(input_files)
+  n_to_read = total_entries if args.nevents <= 0 else min(args.nevents, total_entries)
+  print(
+    "Tree is found to have {} entries across {} file(s) of which {} will be read".format(
+      total_entries, len(input_files), n_to_read
+    )
   )
-  msg += " of which {} will be read".format(
-    entry_stop if entry_stop is not None else total_entries
+  print(
+    "Reading branches file-by-file (layout={}, tree={})".format(
+      layout, resolved_treename
+    )
   )
-  print(msg)
-  print("Reading branches (layout={}, tree={})".format(layout, resolved_treename))
   sys.stdout.flush()
   sys.stderr.flush()
 
-  # uproot.concatenate is the TChain analogue: streams events from each path.
-  if len(input_files) == 1:
-    with uproot.open(input_files[0]) as f:
-      branches = f[resolved_treename].arrays(entry_stop=entry_stop)
-  else:
-    branches = uproot.concatenate(
-      {fpath: resolved_treename for fpath in input_files},
-      entry_stop=entry_stop,
-    )
-
-  # --- normalize event / weight / ID branch names to a common internal schema ---
-  if layout == "displacedv0":
-    rename = {}
-    if "run" in branches.fields:
-      rename["run"] = "_runNb"
-    if "luminosityBlock" in branches.fields:
-      rename["luminosityBlock"] = "_lumiBlock"
-    if "event" in branches.fields:
-      rename["event"] = "_eventNb"
-    for src, dst in rename.items():
-      branches[dst] = branches[src]
-
-    if "genWeight" in branches.fields:
-      branches["_weight"] = branches["genWeight"]
-      isdata = False
-    elif "_weight" not in branches.fields:
-      isdata = True
-    if "Pileup_nTrue" in branches.fields:
-      branches["_nTrueInt"] = branches["Pileup_nTrue"]
-
-  # DisplacedV0 already stores _V0RPVSig / _V0RBSSig (new naming)
-  vnametype = "new"
-  if "_V0RPVSig" not in branches.fields and "_V0RSigPV" in branches.fields:
-    vnametype = "old"
-  if vnametype == "new":
-    rpvsigkey = "RPVSig"
-    rbssigkey = "RBSSig"
-  else:
-    rpvsigkey = "RSigPV"
-    rbssigkey = "RSigBS"
-    branches["_V0NormChi2Pos"] = branches["_V0PtPos"] * 0.0
-    branches["_V0NormChi2Neg"] = branches["_V0PtNeg"] * 0.0
-
-  # Optional AN §5 DY selection (when skimming/ not yet applied)
   deepjet_wp = None if args.no_bveto else args.deepjet_loose_wp
-  if args.apply_dy_selection and layout == "displacedv0":
-    print("Applying AN §5 DY selection on DisplacedV0 branches...")
-    evmask, mll = dy_event_mask(branches, deepjet_wp=deepjet_wp)
-    print("  Events before: {}".format(len(evmask)))
-    print("  Events after:  {}".format(np.sum(evmask)))
-    branches = branches[evmask]
-    mll = mll[evmask]
-  elif layout == "displacedv0" and "nMuon" in branches.fields:
-    # still compute mll for control tree even if selection deferred to skim
-    mll = _dimuon_mass(branches)
-  else:
-    mll = branches["_nimloth_Mll"] if "_nimloth_Mll" in branches.fields else None
+  remaining = None if args.nevents <= 0 else int(args.nevents)
+  nimloth_chunks: list[dict] = []
+  celeborn_chunks: list[dict] = []
+  laurelin_chunks: list[dict] = []
+  telperion_chunks: list[dict] = []
+  sum_before = 0
+  sum_after = 0
+  sum_ks = 0
+  sum_lam = 0
 
-  # Build / map control quantities for nimloth / celeborn
-  if layout == "displacedv0":
-    branches["_nimloth_Mll"] = mll if mll is not None else ak.zeros_like(branches["_runNb"])
-    branches["_nimloth_nJets"] = count_jets(branches)
-    if "Muon_pt" in branches.fields:
-      branches["_celeborn_lPt"] = branches["Muon_pt"]
-      branches["_celeborn_lEta"] = branches["Muon_eta"]
-      branches["_celeborn_lPhi"] = branches["Muon_phi"]
-      branches["_celeborn_lCharge"] = branches["Muon_charge"]
-
-  ksmask = branches["_V0Type"] == 1
-  lmask = (branches["_V0Type"] == 2) | (branches["_V0Type"] == 3)
-
-  print("Constructing auxiliary variables")
-  cospointingPV = cospointing(branches, reference="primaryVertex")
-  cospointingBS = cospointing(branches, reference="beamSpot")
-  ptSum = branches["_V0PtPos"] + branches["_V0PtNeg"]
-
-  # Daughter η/φ dropped in CDTE-31 (needed only for _trackdR). Compute when
-  # present; otherwise fill NaN schema hooks in laurelin.
-  has_daughter_angles = all(
-    k in branches.fields
-    for k in ("_V0EtaPos", "_V0EtaNeg", "_V0PhiPos", "_V0PhiNeg")
-  )
-  if has_daughter_angles:
-    posp4 = vector.zip(
-      {
-        "pt": branches["_V0PtPos"],
-        "eta": branches["_V0EtaPos"],
-        "phi": branches["_V0PhiPos"],
-        "mass": 0.0,
-      }
+  for ifile, fpath in enumerate(input_files):
+    if remaining is not None and remaining <= 0:
+      break
+    nent = file_entries[ifile]
+    stop = nent if remaining is None else min(remaining, nent)
+    verbose = len(input_files) == 1 or ifile == 0
+    print(
+      "File {}/{}: {} (reading {}/{})".format(
+        ifile + 1, len(input_files), fpath, stop, nent
+      )
     )
-    negp4 = vector.zip(
-      {
-        "pt": branches["_V0PtNeg"],
-        "eta": branches["_V0EtaNeg"],
-        "phi": branches["_V0PhiNeg"],
-        "mass": 0.0,
-      }
+    sys.stdout.flush()
+    with uproot.open(fpath) as f:
+      branches = f[resolved_treename].arrays(
+        entry_stop=None if stop >= nent else stop
+      )
+    if remaining is not None:
+      remaining -= stop
+
+    result = build_selected_trees(
+      branches,
+      layout=layout,
+      selection_name=args.selection,
+      apply_dy=args.apply_dy_selection,
+      deepjet_wp=deepjet_wp,
+      isdata=isdata,
+      verbose=verbose,
     )
-    trackdR = posp4.deltaR(negp4)
-  else:
-    trackdR = None
-
-  print("Performing selections")
-  extra = {"cospointingPV": cospointingPV, "cospointingBS": cospointingBS}
-  (selmask, allmasks) = selection(branches, args.selection, extra=extra, cutflow=True)
-  print("Selection summary:")
-  print("  Before selection: {} candidates".format(ak.count(selmask)))
-  for maskname, mask in allmasks.items():
-    print("  - {}: {}".format(maskname, np.sum(mask)))
-  print("  -> Candidates passing all selections: {}".format(np.sum(selmask)))
-
-  print("Filling per-event tree")
-  nimloth = {}
-  nimlothvars = [
-    "_nimloth_Mll",
-    "_nimloth_nJets",
-    "_beamSpotX",
-    "_beamSpotY",
-    "_beamSpotZ",
-    "_primaryVertexX",
-    "_primaryVertexY",
-    "_primaryVertexZ",
-    "_runNb",
-    "_lumiBlock",
-    "_eventNb",
-  ]
-  if not isdata:
-    nimlothvars += ["_weight", "_nTrueInt"]
-  for var in nimlothvars:
-    if var in branches.fields:
-      nimloth[var] = branches[var]
-
-  print("Filling per-lepton tree")
-  celeborn = {}
-  if "_celeborn_lPt" in branches.fields:
-    for var in (
-      "_celeborn_lPt",
-      "_celeborn_lEta",
-      "_celeborn_lPhi",
-      "_celeborn_lCharge",
-    ):
-      celeborn[var] = ak.flatten(branches[var])
-    nlep = ak.num(branches["_celeborn_lPt"], axis=1)
-    celeborn["_runNb"] = np.repeat(ak.to_numpy(branches["_runNb"]), ak.to_numpy(nlep))
-    celeborn["_lumiBlock"] = np.repeat(
-      ak.to_numpy(branches["_lumiBlock"]), ak.to_numpy(nlep)
-    )
-    celeborn["_eventNb"] = np.repeat(ak.to_numpy(branches["_eventNb"]), ak.to_numpy(nlep))
-    if not isdata:
-      celeborn["_weight"] = np.repeat(ak.to_numpy(branches["_weight"]), ak.to_numpy(nlep))
-      if "_nTrueInt" in branches.fields:
-        celeborn["_nTrueInt"] = np.repeat(
-          ak.to_numpy(branches["_nTrueInt"]), ak.to_numpy(nlep)
+    isdata = result["isdata"]
+    sum_before += result["n_before"]
+    sum_after += result["n_after"]
+    sum_ks += result["n_ks"]
+    sum_lam += result["n_lam"]
+    if not verbose:
+      print(
+        "  DY {} -> {}; Ks {}; Lambda {}".format(
+          result["n_before"], result["n_after"], result["n_ks"], result["n_lam"]
         )
+      )
+    nimloth_chunks.append(result["nimloth"])
+    celeborn_chunks.append(result["celeborn"])
+    laurelin_chunks.append(result["laurelin"])
+    telperion_chunks.append(result["telperion"])
+    # Drop raw arrays before the next shard.
+    del branches, result
 
-  def fill_v0_tree(mask):
-    out = {}
-    out["_mass"] = ak.flatten(branches["_V0InvMass"][mask])
-    out["_vertexX"] = ak.flatten(branches["_V0X"][mask])
-    out["_vertexY"] = ak.flatten(branches["_V0Y"][mask])
-    out["_vertexZ"] = ak.flatten(branches["_V0Z"][mask])
-    out["_RPV"] = ak.flatten(branches["_V0RPV"][mask])
-    if "_V0RBS" in branches.fields:
-      out["_RBS"] = ak.flatten(branches["_V0RBS"][mask])
-    out["_RPVSig"] = ak.flatten(branches["_V0" + rpvsigkey][mask])
-    if "_V0" + rbssigkey in branches.fields:
-      out["_RBSSig"] = ak.flatten(branches["_V0" + rbssigkey][mask])
-    out["_pt"] = ak.flatten(branches["_V0Pt"][mask])
-    out["_ptSum"] = ak.flatten(ptSum[mask])
-    if "_V0Eta" in branches.fields:
-      out["_eta"] = ak.flatten(branches["_V0Eta"][mask])
-    if "_V0Phi" in branches.fields:
-      out["_phi"] = ak.flatten(branches["_V0Phi"][mask])
-    out["_nHitsPos"] = ak.flatten(branches["_V0NHitsPos"][mask])
-    out["_nHitsNeg"] = ak.flatten(branches["_V0NHitsNeg"][mask])
-    out["_ptPos"] = ak.flatten(branches["_V0PtPos"][mask])
-    out["_ptNeg"] = ak.flatten(branches["_V0PtNeg"][mask])
-    out["_normChi2Pos"] = ak.flatten(branches["_V0NormChi2Pos"][mask])
-    out["_normChi2Neg"] = ak.flatten(branches["_V0NormChi2Neg"][mask])
-    # Daughter–daughter ΔR + IPs: optional (CDTE-31 drops η/φ and D0/Dz at
-    # source until trackingEff). Keep NaN schema hooks when absent.
-    flat_ones = ak.flatten(branches["_V0Pt"][mask] > -1.0)
-    nan_hook = ak.full_like(ak.values_astype(flat_ones, np.float64), np.nan)
-    if trackdR is not None:
-      out["_trackdR"] = ak.flatten(trackdR[mask])
-    else:
-      out["_trackdR"] = nan_hook
-    if "_V0D0Pos" in branches.fields:
-      out["_d0Pos"] = ak.flatten(branches["_V0D0Pos"][mask])
-      out["_dzPos"] = ak.flatten(branches["_V0DzPos"][mask])
-      out["_d0Neg"] = ak.flatten(branches["_V0D0Neg"][mask])
-      out["_dzNeg"] = ak.flatten(branches["_V0DzNeg"][mask])
-    if "_V0IsoPos" in branches.fields:
-      out["_isoPos"] = ak.flatten(branches["_V0IsoPos"][mask])
-      out["_isoNeg"] = ak.flatten(branches["_V0IsoNeg"][mask])
-    # Neighbour charged-track ΔR in the matched jet (trackingEff / b-frag).
-    # Prefer Sol `_V0NearestChgDR*` when status>0; else NaN hooks.
-    # TODO(Sol neighbour): implement once jet↔V0 association + charged
-    # selection matching b-fragmentation exist in DisplacedV0.
-    if (
-      "_V0NearestChgDRPos" in branches.fields
-      and "_V0NearestChgStatusPos" in branches.fields
-    ):
-      st_pos = ak.flatten(branches["_V0NearestChgStatusPos"][mask])
-      st_neg = ak.flatten(branches["_V0NearestChgStatusNeg"][mask])
-      dr_pos = ak.flatten(branches["_V0NearestChgDRPos"][mask])
-      dr_neg = ak.flatten(branches["_V0NearestChgDRNeg"][mask])
-      out["_trkNearestJetDistPos"] = ak.where(st_pos > 0, dr_pos, nan_hook)
-      out["_trkNearestJetDistNeg"] = ak.where(st_neg > 0, dr_neg, nan_hook)
-    else:
-      out["_trkNearestJetDistPos"] = nan_hook
-      out["_trkNearestJetDistNeg"] = nan_hook
-    ones = branches["_V0Pt"][mask] > -1.0
-    out["_runNb"] = ak.flatten(ones * branches["_runNb"])
-    out["_lumiBlock"] = ak.flatten(ones * branches["_lumiBlock"])
-    out["_eventNb"] = ak.flatten(ones * branches["_eventNb"])
-    if not isdata:
-      out["_weight"] = ak.flatten(ones * branches["_weight"])
-      if "_nTrueInt" in branches.fields:
-        out["_nTrueInt"] = ak.flatten(ones * branches["_nTrueInt"])
-    return out
-
-  print("Filling K0s tree")
-  laurelinmask = ksmask & selmask
-  print("Found {} K0s candidates".format(np.sum(laurelinmask)))
-  laurelin = fill_v0_tree(laurelinmask)
-
-  print("Filling Lambda tree")
-  telperionmask = lmask & selmask
-  print("Found {} Lambda candidates".format(np.sum(telperionmask)))
-  telperion = fill_v0_tree(telperionmask)
+  if len(input_files) > 1:
+    print(
+      "Totals: DY {} -> {}; Ks {}; Lambda {}".format(
+        sum_before, sum_after, sum_ks, sum_lam
+      )
+    )
 
   print("Writing trees to output file")
   with uproot.recreate(args.outputfile) as f:
-    f["nimloth"] = nimloth
-    f["celeborn"] = celeborn
-    f["laurelin"] = laurelin
-    f["telperion"] = telperion
-    if hcounter is not None:
-      f["hCounter"] = hcounter
-    if ntrueint_hist is not None:
-      f["nTrueInteractions"] = ntrueint_hist
+    f["nimloth"] = _merge_tree_dicts(nimloth_chunks)
+    f["celeborn"] = _merge_tree_dicts(celeborn_chunks)
+    f["laurelin"] = _merge_tree_dicts(laurelin_chunks)
+    f["telperion"] = _merge_tree_dicts(telperion_chunks)
+    hcounter_out = _hist_for_write(hcounter)
+    ntrueint_out = _hist_for_write(ntrueint_hist)
+    if hcounter_out is not None:
+      f["hCounter"] = hcounter_out
+    if ntrueint_out is not None:
+      f["nTrueInteractions"] = ntrueint_out
 
   if args.transfer:
     cmd = "mv {} {}".format(args.outputfile, origoutputfile)

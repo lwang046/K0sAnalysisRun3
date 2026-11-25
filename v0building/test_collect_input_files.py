@@ -6,7 +6,12 @@ import os
 import tempfile
 import unittest
 
-from v0builder import collect_input_files, _read_filelist
+from v0builder import (
+  _accumulate_hist,
+  _hist_for_write,
+  _read_filelist,
+  collect_input_files,
+)
 
 
 class CollectInputFilesTest(unittest.TestCase):
@@ -67,6 +72,29 @@ class CollectInputFilesTest(unittest.TestCase):
   def test_missing_raises(self):
     with self.assertRaises(FileNotFoundError):
       collect_input_files(["/no/such/file.root"])
+
+  def test_accumulate_hist_sums_to_numpy(self):
+    import numpy as np
+    import uproot
+
+    with tempfile.TemporaryDirectory() as tmp:
+      p1 = os.path.join(tmp, "h1.root")
+      p2 = os.path.join(tmp, "h2.root")
+      edges = np.linspace(0, 10, 11)
+      with uproot.recreate(p1) as f:
+        f["hCounter"] = np.histogram([1, 2, 3], bins=edges)
+      with uproot.recreate(p2) as f:
+        f["hCounter"] = np.histogram([1, 1, 2], bins=edges)
+      acc = None
+      with uproot.open(p1) as f:
+        acc = _accumulate_hist(acc, f["hCounter"])
+      with uproot.open(p2) as f:
+        acc = _accumulate_hist(acc, f["hCounter"])
+      written = _hist_for_write(acc)
+      self.assertIsNotNone(written)
+      values, out_edges = written
+      np.testing.assert_allclose(out_edges, edges)
+      np.testing.assert_allclose(values, [0, 3, 2, 1, 0, 0, 0, 0, 0, 0])
 
 
 if __name__ == "__main__":
