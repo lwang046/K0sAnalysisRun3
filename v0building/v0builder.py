@@ -15,10 +15,19 @@
 # Prefer CMSSW V0Analyzer for Kalman fitting; this step applies
 # AN-20-111 §6 tight cuts (v0selections.selection_legacy) and
 # optional offline DY reference selection (AN §5).
+#
+# Input (-i / --inputfile): one or more of
+#   - a single ROOT file
+#   - a text filelist (one path per line; blank lines and # comments ignored)
+#   - multiple ROOT paths and/or shell globs
+# Events are streamed with uproot (TChain-like concatenate) so CRAB shards
+# on EOS need not be hadd'ed first. Example:
+#   python3 v0builder.py -i dy_files.txt -o v0sel_dy.root --apply-dy-selection
 
 from __future__ import annotations
 
 import argparse
+import glob
 import os
 import sys
 
@@ -33,6 +42,132 @@ MZ = 91.1876
 # Keep in sync with analysis/config_defaults_run3.py DEEPJET_LOOSE_WP.
 # TBD: freeze from BTV 2024 JSON (samples/deepjet_wp_2024.md / conditions.md).
 DEEPJET_LOOSE_WP_PLACEHOLDER = 0.0494
+
+
+def _normalize_path(path: str, base_dir: str | None = None) -> str:
+  """Absolute-ize local paths; leave root:// / xrootd URLs unchanged."""
+  path = path.strip()
+  if not path:
+    return path
+  if path.startswith(("root://", "http://", "https://")):
+    return path
+  if os.path.isabs(path):
+    return os.path.abspath(path)
+  if base_dir:
+    return os.path.abspath(os.path.join(base_dir, path))
+  return os.path.abspath(path)
+
+
+def _is_root_file(path: str) -> bool:
+  return path.rstrip("/").endswith(".root")
+
+
+def _read_filelist(list_path: str) -> list[str]:
+  """Read ROOT paths from a text filelist (one per line)."""
+  list_path = os.path.abspath(list_path)
+  base_dir = os.path.dirname(list_path)
+  out: list[str] = []
+  with open(list_path, "r", encoding="utf-8") as fh:
+    for lineno, raw in enumerate(fh, 1):
+      line = raw.strip()
+      if not line or line.startswith("#"):
+        continue
+      # Allow optional "file:" prefix from some CMS tools.
+      if line.startswith("file:"):
+        line = line[5:]
+      resolved = _normalize_path(line, base_dir=base_dir)
+      if not _is_root_file(resolved) and not resolved.startswith("root://"):
+        raise ValueError(
+          "filelist {}:{}: expected a .root path, got {!r}".format(
+            list_path, lineno, line
+          )
+        )
+      out.append(resolved)
+  if not out:
+    raise ValueError("filelist {!r} contains no ROOT paths".format(list_path))
+  return out
+
+
+def collect_input_files(specs: list[str]) -> list[str]:
+  """Resolve ``-i`` tokens into an ordered list of ROOT files.
+
+  Each token may be:
+  - a ``.root`` path (local or ``root://``),
+  - a glob matching ``.root`` files,
+  - a text filelist (one path per line).
+  """
+  files: list[str] = []
+  for spec in specs:
+    spec = spec.strip()
+    if not spec:
+      continue
+    # Glob first when the token has wildcards (even if it looks like a list).
+    if any(ch in spec for ch in ("*", "?", "[")):
+      matches = sorted(glob.glob(spec))
+      if not matches:
+        raise FileNotFoundError("glob {!r} matched no files".format(spec))
+      root_matches = [m for m in matches if _is_root_file(m)]
+      if not root_matches:
+        raise FileNotFoundError(
+          "glob {!r} matched files but none end in .root".format(spec)
+        )
+      files.extend(_normalize_path(m) for m in root_matches)
+      continue
+
+    # root:// URLs are always treated as a single ROOT source.
+    if spec.startswith("root://"):
+      files.append(spec)
+      continue
+
+    path = _normalize_path(spec)
+    if _is_root_file(path):
+      if not os.path.isfile(path):
+        raise FileNotFoundError("input ROOT file not found: {!r}".format(path))
+      files.append(path)
+      continue
+
+    if os.path.isfile(path):
+      files.extend(_read_filelist(path))
+      continue
+
+    raise FileNotFoundError(
+      "input {!r} is neither a .root file, an existing filelist, nor a glob".format(
+        spec
+      )
+    )
+
+  # Preserve order; drop exact duplicates (common when mixing globs + lists).
+  seen: set[str] = set()
+  unique: list[str] = []
+  for f in files:
+    if f not in seen:
+      seen.add(f)
+      unique.append(f)
+  if not unique:
+    raise FileNotFoundError("no input ROOT files resolved from {!r}".format(specs))
+  return unique
+
+
+def _discover_tree(fkeys: list[str], treename: str):
+  """Pick tree path + layout from open-file keys."""
+  for candidate in (treename, "displacedV0Ntuple/events", "events"):
+    if candidate in fkeys:
+      return candidate, "displacedv0"
+  if "blackJackAndHookers" in fkeys:
+    return "blackJackAndHookers/blackJackAndHookersTree", "upstream"
+  raise KeyError(
+    "Neither DisplacedV0 tree {!r} (or displacedV0Ntuple/events / events) "
+    "nor upstream blackJackAndHookers found. Keys: {}".format(treename, fkeys)
+  )
+
+
+def _accumulate_hist(acc, hist):
+  """Sum TH1-like objects across input files (MC counters)."""
+  if hist is None:
+    return acc
+  if acc is None:
+    return hist
+  return acc + hist
 
 
 def _dimuon_mass(branches):
@@ -128,12 +263,35 @@ def count_jets(branches):
 if __name__ == "__main__":
   sys.stderr.write("###starting###\n")
 
-  parser = argparse.ArgumentParser(description="Perform V0 candidate selection (Run3)")
-  parser.add_argument("-i", "--inputfile", required=True, type=os.path.abspath)
+  parser = argparse.ArgumentParser(
+    description=(
+      "Perform V0 candidate selection (Run3). "
+      "Accepts a single ROOT file, a text filelist, multiple files, and/or globs "
+      "via -i (TChain-like; no hadd of CRAB shards required)."
+    )
+  )
+  parser.add_argument(
+    "-i",
+    "--inputfile",
+    required=True,
+    nargs="+",
+    metavar="PATH",
+    help=(
+      "Input ROOT file(s), glob(s), and/or a text filelist "
+      "(one .root path per line; # comments / blank lines skipped). "
+      "Events are read with uproot.concatenate (TChain-like) without merging "
+      "inputs on disk. Example: -i dy_crab_files.txt"
+    ),
+  )
   parser.add_argument("-o", "--outputfile", required=True, type=os.path.abspath)
   parser.add_argument("-s", "--selection", default="legacy")
   parser.add_argument("-n", "--nevents", default=-1, type=int)
-  parser.add_argument("--transfer", default=False, action="store_true")
+  parser.add_argument(
+    "--transfer",
+    default=False,
+    action="store_true",
+    help="Copy a single local input ROOT to $TMPDIR before reading (multi-file unsupported)",
+  )
   parser.add_argument(
     "--treename",
     default="displacedV0Ntuple/events",
@@ -162,71 +320,98 @@ if __name__ == "__main__":
   if args.selection not in ("legacy",):
     raise Exception("ERROR: selection " + args.selection + " not recognized.")
 
+  input_files = collect_input_files(args.inputfile)
+  print("Resolved {} input file(s)".format(len(input_files)))
+  for _ifp in input_files[:5]:
+    print("  {}".format(_ifp))
+  if len(input_files) > 5:
+    print("  ... ({} more)".format(len(input_files) - 5))
+
   if args.transfer:
+    if len(input_files) != 1:
+      raise RuntimeError(
+        "--transfer only supports a single local ROOT file "
+        "({} inputs resolved)".format(len(input_files))
+      )
+    if input_files[0].startswith("root://"):
+      raise RuntimeError("--transfer does not support root:// URLs")
     tmpdir = os.environ.get("TMPDIR", "/tmp")
-    tmpfile = os.path.join(tmpdir, args.inputfile.strip("/").replace("/", "_"))
-    cmd = "cp {} {}".format(args.inputfile, tmpfile)
+    tmpfile = os.path.join(tmpdir, input_files[0].strip("/").replace("/", "_"))
+    cmd = "cp {} {}".format(input_files[0], tmpfile)
     print("Transfering input file to {}...".format(tmpdir))
     print(cmd)
     os.system(cmd)
-    args.inputfile = tmpfile
+    input_files = [tmpfile]
     origoutputfile = args.outputfile
     args.outputfile = tmpfile.replace(".root", "_out.root")
 
-  with uproot.open(args.inputfile) as f:
-    fkeys = [key.split(";")[0] for key in f.keys()]
+  # Discover tree/layout from the first file; read all files as a TChain-like
+  # concatenate so EOS CRAB shards need not be hadd'ed.
+  with uproot.open(input_files[0]) as f0:
+    fkeys0 = [key.split(";")[0] for key in f0.keys()]
+    resolved_treename, layout = _discover_tree(fkeys0, args.treename)
 
-    # DisplacedV0: TFileService nests the tree under the module label.
-    # Fall back to a bare 'events' tree, then upstream heavyNeutrino layout.
-    tree = None
-    layout = None
-    for candidate in (args.treename, "displacedV0Ntuple/events", "events"):
-      if candidate in fkeys:
-        tree = f[candidate]
-        layout = "displacedv0"
-        break
-    if tree is None and "blackJackAndHookers" in fkeys:
-      tree = f["blackJackAndHookers"]["blackJackAndHookersTree"]
-      layout = "upstream"
-    if tree is None:
-      raise KeyError(
-        "Neither DisplacedV0 tree {!r} (or displacedV0Ntuple/events / events) "
-        "nor upstream blackJackAndHookers found. Keys: {}".format(
-          args.treename, fkeys
+  isdata = False
+  hcounter = None
+  ntrueint_hist = None
+  total_entries = 0
+  for fpath in input_files:
+    with uproot.open(fpath) as f:
+      fkeys = [key.split(";")[0] for key in f.keys()]
+      try:
+        this_tree, this_layout = _discover_tree(fkeys, args.treename)
+      except KeyError as exc:
+        raise KeyError("In file {}: {}".format(fpath, exc)) from exc
+      if this_layout != layout or this_tree != resolved_treename:
+        raise RuntimeError(
+          "mixed tree layouts/paths across inputs: "
+          "{!r} ({}) vs first-file {!r} ({}) in {}".format(
+            this_tree, this_layout, resolved_treename, layout, fpath
+          )
         )
-      )
+      total_entries += f[resolved_treename].num_entries
 
-    isdata = False
+      if layout == "upstream":
+        hcounterkey = "blackJackAndHookers/hCounter"
+        ntrueintkey = "blackJackAndHookers/nTrueInteractions"
+        if hcounterkey in fkeys and ntrueintkey in fkeys:
+          hcounter = _accumulate_hist(hcounter, f[hcounterkey])
+          ntrueint_hist = _accumulate_hist(ntrueint_hist, f[ntrueintkey])
+      else:
+        if "hCounter" in fkeys:
+          hcounter = _accumulate_hist(hcounter, f["hCounter"])
+        if "nTrueInteractions" in fkeys:
+          ntrueint_hist = _accumulate_hist(ntrueint_hist, f["nTrueInteractions"])
+
+  if layout == "upstream" and (hcounter is None or ntrueint_hist is None):
+    print("No valid hCounter or nTrueInt found; assuming data...")
+    isdata = True
     hcounter = None
     ntrueint_hist = None
-    if layout == "upstream":
-      hcounterkey = "blackJackAndHookers/hCounter"
-      ntrueintkey = "blackJackAndHookers/nTrueInteractions"
-      if hcounterkey not in fkeys or ntrueintkey not in fkeys:
-        print("No valid hCounter or nTrueInt found; assuming data...")
-        isdata = True
-      else:
-        hcounter = f[hcounterkey]
-        ntrueint_hist = f[ntrueintkey]
-    else:
-      # DisplacedV0: no hCounter yet; detect MC via genWeight presence later
-      if "hCounter" in fkeys:
-        hcounter = f["hCounter"]
-      if "nTrueInteractions" in fkeys:
-        ntrueint_hist = f["nTrueInteractions"]
 
-    entry_stop = None
-    if args.nevents > 0 and args.nevents < tree.num_entries:
-      entry_stop = args.nevents
-    msg = "Tree is found to have {} entries".format(tree.num_entries)
-    msg += " of which {} will be read".format(
-      entry_stop if entry_stop is not None else tree.num_entries
+  entry_stop = None
+  if args.nevents > 0 and args.nevents < total_entries:
+    entry_stop = args.nevents
+  msg = "Tree is found to have {} entries across {} file(s)".format(
+    total_entries, len(input_files)
+  )
+  msg += " of which {} will be read".format(
+    entry_stop if entry_stop is not None else total_entries
+  )
+  print(msg)
+  print("Reading branches (layout={}, tree={})".format(layout, resolved_treename))
+  sys.stdout.flush()
+  sys.stderr.flush()
+
+  # uproot.concatenate is the TChain analogue: streams events from each path.
+  if len(input_files) == 1:
+    with uproot.open(input_files[0]) as f:
+      branches = f[resolved_treename].arrays(entry_stop=entry_stop)
+  else:
+    branches = uproot.concatenate(
+      {fpath: resolved_treename for fpath in input_files},
+      entry_stop=entry_stop,
     )
-    print(msg)
-    print("Reading branches (layout={})".format(layout))
-    sys.stdout.flush()
-    sys.stderr.flush()
-    branches = tree.arrays(entry_stop=entry_stop)
 
   # --- normalize event / weight / ID branch names to a common internal schema ---
   if layout == "displacedv0":
