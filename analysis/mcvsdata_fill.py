@@ -70,6 +70,16 @@ if __name__=='__main__':
                       help='Skip pileup reweighting (default True until Run3 PU profiles wired)')
   parser.add_argument('--dopileup', dest='nopileup', action='store_false',
                       help='Enable pileup reweighting (requires reweighting/pileup AVAILABLE)')
+  # Absolute-normalization overrides (apply to every mcin / datain entry).
+  # Prefer these or JSON keys over trusting post-filter ΣgenWeight as hCounter.
+  parser.add_argument('--mc-sumweights', type=float, default=None,
+                      help='Override mcin[].sumweights (full-sample Σw; bypasses hCounter)')
+  parser.add_argument('--mc-lumi', type=float, default=None,
+                      help='Override mcin[].luminosity (pb^-1; same units as JSON)')
+  parser.add_argument('--mc-xsection', type=float, default=None,
+                      help='Override mcin[].xsection (pb)')
+  parser.add_argument('--data-lumi', type=float, default=None,
+                      help='Override datain[].luminosity (pb^-1; plot label / totallumi)')
   args = parser.parse_args()
 
   # load input configuration
@@ -77,6 +87,19 @@ if __name__=='__main__':
     temp = json.load(f)
   datain = temp['datain']
   simin = temp['mcin']
+  # CLI overrides (external Σw / lumi / xsec for physics-usable absolute scale)
+  if args.mc_sumweights is not None:
+    for simdict in simin:
+      simdict['sumweights'] = float(args.mc_sumweights)
+  if args.mc_lumi is not None:
+    for simdict in simin:
+      simdict['luminosity'] = float(args.mc_lumi)
+  if args.mc_xsection is not None:
+    for simdict in simin:
+      simdict['xsection'] = float(args.mc_xsection)
+  if args.data_lumi is not None:
+    for datadict in datain:
+      datadict['luminosity'] = float(args.data_lumi)
   ndatafiles = len(datain)
   nsimfiles = len(simin)
   # prints for checking
@@ -164,6 +187,7 @@ if __name__=='__main__':
                     yvariable=None,
                     xsection=1, lumi=1, weightvarname=None,
                     hcountername='hCounter',
+                    sumweights_override=None,
                     sidevariable=None,
                     label=None,
                     nentries=None,
@@ -182,6 +206,8 @@ if __name__=='__main__':
     # note: the counts are normalized to the provided xsection and lumi
     #       (if isdata is False, else each value simply gets weight 1)
     # note: if variable is None, return sum of weights and corresponding statistical error
+    # note: sumweights_override (from input JSON key "sumweights") bypasses hCounter —
+    #       useful when reusing a v0sel file that lacks the histogram.
 
     # open the file and read hcounter
     print('Now running on file {}...'.format(inputfile))
@@ -189,13 +215,32 @@ if __name__=='__main__':
       sumweights = 1 # default case for data, overwritten for simulation below
       puscale = None # to implement later
       if not isdata:
-        try: sumweights = f[hcountername].values()[0]
-        except:
-          msg = 'WARNING: isdata was set to False, but no valid hCounter found in file'
-          msg += ' (for provided key {}),'.format(hcountername)
-          msg += ' will use sum of weights = 1 for this sample.'
-          msg += ' Valid keys are {}'.format(f.keys())
-          print(msg)
+        if sumweights_override is not None:
+          sumweights = float(sumweights_override)
+          print('Using sumweights={} from input JSON for {}'.format(sumweights, inputfile))
+        else:
+          # Top-level hCounter (v0builder) or TFileService module path from GenWeightCounter.
+          hcounter_keys = [
+            hcountername,
+            'genWeightCounter/hCounter',
+            'blackJackAndHookers/hCounter',
+          ]
+          sumweights = None
+          for hk in hcounter_keys:
+            try:
+              sumweights = f[hk].values()[0]
+              print('Using {} = {} from {}'.format(hk, sumweights, inputfile))
+              break
+            except Exception:
+              continue
+          if sumweights is None:
+            msg = 'WARNING: isdata was set to False, but no valid hCounter found in file'
+            msg += ' (tried {}).'.format(hcounter_keys)
+            msg += ' will use sum of weights = 1 for this sample.'
+            msg += ' Set mcin[].sumweights / --mc-sumweights, or resubmit MC with GenWeightCounter.'
+            msg += ' Valid keys are {}'.format(f.keys())
+            print(msg)
+            sumweights = 1
 
       # get main tree and manage number of entries
       tree = f[treename]
@@ -398,6 +443,7 @@ if __name__=='__main__':
       variable=variable,
       yvariable=yvariable,
       isdata=False, xsection=xsection, lumi=lumi,
+      sumweights_override=simdict.get('sumweights'),
       sidevariable=sidevariable,
       label=simdict['label'].strip(' .'),
       nentries=args.nprocess,
@@ -472,6 +518,7 @@ if __name__=='__main__':
         variable=nv,
         isdata=False,
         xsection=simdict['xsection'], lumi=simdict['luminosity'],
+        sumweights_override=simdict.get('sumweights'),
         label=simdict['label'].strip(' .')+'_normrange',
         sidevariable=sidevariable,
         nentries=args.nprocess,
@@ -551,6 +598,7 @@ if __name__=='__main__':
       sumweights, _, _ = get_histogram(
         simdict['file'], args.eventtreename,
         isdata=False, xsection=xsection, lumi=lumi,
+        sumweights_override=simdict.get('sumweights'),
         nentries=args.nprocess,
         year=simdict['year'], campaign=simdict['campaign'])
       simsum += sumweights
