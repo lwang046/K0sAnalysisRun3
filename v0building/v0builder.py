@@ -666,7 +666,8 @@ if __name__ == "__main__":
   # Discover tree/layout from the first file; process shards one-by-one so
   # EOS CRAB outputs need not be hadd'ed and peak RAM stays near one file.
   with uproot.open(input_files[0]) as f0:
-    fkeys0 = [key.split(";")[0] for key in f0.keys()]
+    # recursive=True so genWeightCounter/hCounter is visible alongside trees.
+    fkeys0 = [key.split(";")[0] for key in f0.keys(recursive=True)]
     resolved_treename, layout = _discover_tree(fkeys0, args.treename)
 
   isdata = False
@@ -681,7 +682,7 @@ if __name__ == "__main__":
   file_entries: list[int] = []
   for fpath in input_files:
     with uproot.open(fpath) as f:
-      fkeys = [key.split(";")[0] for key in f.keys()]
+      fkeys = [key.split(";")[0] for key in f.keys(recursive=True)]
       try:
         this_tree, this_layout = _discover_tree(fkeys, args.treename)
       except KeyError as exc:
@@ -704,10 +705,27 @@ if __name__ == "__main__":
           hcounter = _accumulate_hist(hcounter, f[hcounterkey])
           ntrueint_hist = _accumulate_hist(ntrueint_hist, f[ntrueintkey])
       else:
-        if "hCounter" in fkeys:
-          hcounter = _accumulate_hist(hcounter, f["hCounter"])
+        # Prefer pre-filter GenWeightCounter (TFileService module dir), then
+        # top-level hCounter (after a previous v0builder / inject).
+        hcounter_candidates = (
+          "genWeightCounter/hCounter",
+          "hCounter",
+        )
+        hckey = next((k for k in hcounter_candidates if k in fkeys), None)
+        if hckey is None:
+          # Recursive keys (uproot may list only directories at top level).
+          for k in fkeys:
+            if k.endswith("/hCounter") or k == "hCounter":
+              hckey = k
+              break
+        if hckey is not None:
+          hcounter = _accumulate_hist(hcounter, f[hckey])
         if "nTrueInteractions" in fkeys:
           ntrueint_hist = _accumulate_hist(ntrueint_hist, f["nTrueInteractions"])
+        elif "genWeightCounter/nTrueInteractions" in fkeys:
+          ntrueint_hist = _accumulate_hist(
+            ntrueint_hist, f["genWeightCounter/nTrueInteractions"]
+          )
 
   if layout == "upstream" and (hcounter is None or ntrueint_hist is None):
     print("No valid hCounter or nTrueInt found; assuming data...")

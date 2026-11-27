@@ -219,14 +219,28 @@ if __name__=='__main__':
           sumweights = float(sumweights_override)
           print('Using sumweights={} from input JSON for {}'.format(sumweights, inputfile))
         else:
-          try: sumweights = f[hcountername].values()[0]
-          except Exception:
+          # Top-level hCounter (v0builder) or TFileService module path from GenWeightCounter.
+          hcounter_keys = [
+            hcountername,
+            'genWeightCounter/hCounter',
+            'blackJackAndHookers/hCounter',
+          ]
+          sumweights = None
+          for hk in hcounter_keys:
+            try:
+              sumweights = f[hk].values()[0]
+              print('Using {} = {} from {}'.format(hk, sumweights, inputfile))
+              break
+            except Exception:
+              continue
+          if sumweights is None:
             msg = 'WARNING: isdata was set to False, but no valid hCounter found in file'
-            msg += ' (for provided key {}),'.format(hcountername)
+            msg += ' (tried {}).'.format(hcounter_keys)
             msg += ' will use sum of weights = 1 for this sample.'
-            msg += ' Set mcin[].sumweights or re-run v0builder / scripts/sum_genweights.py.'
+            msg += ' Set mcin[].sumweights / --mc-sumweights, or resubmit MC with GenWeightCounter.'
             msg += ' Valid keys are {}'.format(f.keys())
             print(msg)
+            sumweights = 1
 
       # get main tree and manage number of entries
       tree = f[treename]

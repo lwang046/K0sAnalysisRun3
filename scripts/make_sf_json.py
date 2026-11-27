@@ -8,6 +8,10 @@ Reads ``mcvsdata_fill`` output (data + MC ``*_nominal`` TH1s), forms
 * schema ``displaced_track_C_delta2D_v1`` (bins + C ± err), and
 * optional correctionlib v2 payload (``--correctionlib``).
 
+When multiple data or MC ``*_nominal`` histograms exist (e.g. Muon0+Muon1),
+they are **summed** (errors in quadrature) before the ratio — matching how
+``mcvsdata_fill`` normalizes across ``datain`` / ``mcin``.
+
 Attribution: method from AN-20-111; Run3 recipe in Project method doc.
 """
 from __future__ import annotations
@@ -26,9 +30,78 @@ def _ratio_err(n: float, dn: float, d: float, dd: float) -> float:
   return abs(n / d) * math.sqrt((dn / n) ** 2 + (dd / d) ** 2) if n != 0 else abs(dn / d)
 
 
+def _classify_nominals(
+  nominals: list[str],
+  data_hist: str | None,
+  mc_hist: str | None,
+) -> tuple[list[str], list[str]]:
+  """Split ``*_nominal`` names into data vs MC groups."""
+  if data_hist or mc_hist:
+    # Explicit overrides: optional single hist each; remaining go to the other side.
+    data_names = [data_hist] if data_hist else []
+    mc_names = [mc_hist] if mc_hist else []
+    if data_hist and data_hist not in nominals:
+      raise SystemExit("data hist {!r} not in {}".format(data_hist, nominals))
+    if mc_hist and mc_hist not in nominals:
+      raise SystemExit("mc hist {!r} not in {}".format(mc_hist, nominals))
+    if not data_names:
+      data_names = [k for k in nominals if k not in mc_names]
+    if not mc_names:
+      mc_names = [k for k in nominals if k not in data_names]
+    return data_names, mc_names
+
+  data_sub = ("data", "muon", "run2024")
+  mc_sub = ("sim", "dy", "mc", "summer")
+  data_names = [k for k in nominals if any(s in k.lower() for s in data_sub)]
+  mc_names = [k for k in nominals if any(s in k.lower() for s in mc_sub)]
+  # Drop accidental overlaps (prefer exclusive assignment).
+  overlap = set(data_names) & set(mc_names)
+  if overlap:
+    # Ambiguous labels: keep in neither auto set; require explicit flags.
+    data_names = [k for k in data_names if k not in overlap]
+    mc_names = [k for k in mc_names if k not in overlap]
+  leftover = [k for k in nominals if k not in data_names and k not in mc_names]
+  if leftover and (not data_names or not mc_names):
+    # Fallback: first leftover → empty side.
+    for k in leftover:
+      if not data_names:
+        data_names.append(k)
+      elif not mc_names:
+        mc_names.append(k)
+  if not data_names or not mc_names:
+    raise SystemExit(
+      "Could not classify data vs MC nominals (data={}, mc={}, all={}). "
+      "Pass --data-hist / --mc-hist.".format(data_names, mc_names, nominals)
+    )
+  return data_names, mc_names
+
+
+def _sum_hists(f, names: list[str]):
+  import numpy as np
+
+  vals = None
+  errs2 = None
+  edges = None
+  for name in names:
+    v, e = f[name].to_numpy()
+    err = np.asarray(f[name].errors(), dtype=np.float64)
+    v = np.asarray(v, dtype=np.float64)
+    if edges is None:
+      edges = np.asarray(e, dtype=np.float64)
+      vals = v.copy()
+      errs2 = err * err
+    else:
+      if not np.allclose(edges, e):
+        raise SystemExit(
+          "Bin edges differ for {}: {} vs {}".format(name, e, edges)
+        )
+      vals = vals + v
+      errs2 = errs2 + err * err
+  return edges, vals, np.sqrt(errs2)
+
+
 def _read_pair(path: str, data_hist: str | None, mc_hist: str | None):
   import uproot
-  import numpy as np
 
   with uproot.open(path) as f:
     keys = [k.split(";")[0] for k in f.keys()]
@@ -36,37 +109,17 @@ def _read_pair(path: str, data_hist: str | None, mc_hist: str | None):
     if not nominals:
       raise SystemExit("No '*_nominal' histograms in {}".format(path))
 
-    def pick(explicit: str | None, prefer_substr: tuple[str, ...], fallback_idx: int) -> str:
-      if explicit:
-        if explicit not in keys:
-          raise SystemExit("Histogram {!r} not in file; have {}".format(explicit, keys))
-        return explicit
-      for k in nominals:
-        low = k.lower()
-        if any(s in low for s in prefer_substr):
-          return k
-      if len(nominals) <= fallback_idx:
-        raise SystemExit("Need data and MC nominal hists; found {}".format(nominals))
-      return nominals[fallback_idx]
-
-    # Data labels usually contain "data" / "Muon" / "Run2024"; MC: "sim" / "DY".
-    dname = pick(data_hist, ("data", "muon", "run2024"), 0)
-    mname = pick(mc_hist, ("sim", "dy", "mc", "summer"), 1 if nominals[0] == dname else 0)
-    if dname == mname:
-      others = [k for k in nominals if k != dname]
-      if not others:
-        raise SystemExit("Could not separate data vs MC nominals: {}".format(nominals))
-      mname = others[0]
-
-    dvals, dedges = f[dname].to_numpy()
-    mvals, medges = f[mname].to_numpy()
-    if not np.allclose(dedges, medges):
+    data_names, mc_names = _classify_nominals(nominals, data_hist, mc_hist)
+    dedges, dvals, derr = _sum_hists(f, data_names)
+    medges, mvals, merr = _sum_hists(f, mc_names)
+    if not (dedges == medges).all():
       raise SystemExit("Data/MC bin edges differ: {} vs {}".format(dedges, medges))
-    derr = f[dname].errors()
-    merr = f[mname].errors()
+
     meta = {
-      "data_hist": dname,
-      "mc_hist": mname,
+      "data_hists": data_names,
+      "mc_hists": mc_names,
+      "data_hist": "+".join(data_names),
+      "mc_hist": "+".join(mc_names),
       "keys": keys,
     }
     if "norm_scale" in keys:
@@ -135,8 +188,16 @@ def main() -> int:
   parser.add_argument("-i", "--input", required=True, help="ROOT file with C fill histograms")
   parser.add_argument("-o", "--output", required=True, help="Output JSON path")
   parser.add_argument("--era", default="Run2024D")
-  parser.add_argument("--data-hist", default=None, help="Override data TH1 name")
-  parser.add_argument("--mc-hist", default=None, help="Override MC TH1 name")
+  parser.add_argument(
+    "--data-hist",
+    default=None,
+    help="Optional single data TH1 name (otherwise sum all data-like *_nominal)",
+  )
+  parser.add_argument(
+    "--mc-hist",
+    default=None,
+    help="Optional single MC TH1 name (otherwise sum all MC-like *_nominal)",
+  )
   parser.add_argument(
     "--correctionlib",
     action="store_true",
@@ -164,11 +225,13 @@ def main() -> int:
     "input": args.input,
     "data_hist": meta["data_hist"],
     "mc_hist": meta["mc_hist"],
+    "data_hists": meta["data_hists"],
+    "mc_hists": meta["mc_hists"],
     "bins_cm": edges,
     "C": c_vals,
     "C_err": c_errs,
     "note": (
-      "C_i = data_i / MC_i from mcvsdata_fill *_nominal TH1s "
+      "C_i = (sum data_i) / (sum MC_i) from mcvsdata_fill *_nominal TH1s "
       "(MC already scaled when fill used --normmode range)."
     ),
   }
