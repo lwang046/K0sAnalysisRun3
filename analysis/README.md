@@ -14,6 +14,7 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 | `config_controlvars.py` | DY controls (`_nimloth_Mll`, muon \(p_T/\eta\)) |
 | `config_lavars.py` | \(\Lambda\) diagnostic |
 | `example_input_run2024d.json` | Template `datain`/`mcin` for `mcvsdata_fill.py` |
+| `example_input_run2024d.md` | Lumi / xsec / `sumweights` CLI notes (Muon vs Golden) |
 | `mcvsdata_fill.py` | Core fill: sideband → yields → low-\(\Delta_{2D}\) scale |
 | `mcvsdata_submit*.py` | Condor/local batch |
 

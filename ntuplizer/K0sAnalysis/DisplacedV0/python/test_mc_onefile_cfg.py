@@ -67,14 +67,18 @@ process.TFileService = cms.Service(
 
 from K0sAnalysis.DisplacedV0.displacedV0_cfi import displacedV0Ntuple
 from K0sAnalysis.DisplacedV0.dimuonPreFilter_cfi import dimuonPreFilter
+from K0sAnalysis.DisplacedV0.genWeightCounter_cfi import genWeightCounter
 
 process.displacedV0Ntuple = displacedV0Ntuple.clone(
     isData=cms.bool(False),
     useESMagneticField=cms.bool(options.useESMagneticField),
 )
 process.dimuonPreFilter = dimuonPreFilter.clone()
+process.genWeightCounter = genWeightCounter.clone()
 
 if options.enableDimuonPreFilter:
-    process.p = cms.Path(process.dimuonPreFilter + process.displacedV0Ntuple)
+    process.p = cms.Path(
+        process.genWeightCounter + process.dimuonPreFilter + process.displacedV0Ntuple
+    )
 else:
-    process.p = cms.Path(process.displacedV0Ntuple)
+    process.p = cms.Path(process.genWeightCounter + process.displacedV0Ntuple)

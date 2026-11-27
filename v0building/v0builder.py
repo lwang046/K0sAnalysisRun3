@@ -208,6 +208,29 @@ def _hist_for_write(acc):
   return (acc["values"], acc["edges"])
 
 
+def _hcounter_from_sum(sum_of_weights: float):
+  """Build a 1-bin hCounter hist dict with sum-of-weights in the first bin.
+
+  Matches the upstream convention used by ``mcvsdata_fill`` /
+  ``fitinvmass``: ``f['hCounter'].values()[0]`` is the MC denominator.
+  """
+  return {
+    "values": np.asarray([float(sum_of_weights)], dtype=np.float64),
+    "edges": np.asarray([0.0, 1.0], dtype=np.float64),
+    "underflow": 0.0,
+    "overflow": 0.0,
+  }
+
+
+def _sum_genweights(branches) -> float | None:
+  """Sum signed genWeight / _weight for DisplacedV0 (or already-mapped) MC."""
+  if "genWeight" in branches.fields:
+    return float(np.sum(ak.to_numpy(branches["genWeight"])))
+  if "_weight" in branches.fields:
+    return float(np.sum(ak.to_numpy(branches["_weight"])))
+  return None
+
+
 def _merge_tree_dicts(chunks: list[dict]) -> dict:
   """Concatenate per-chunk output tree dicts (awkward / numpy columns)."""
   chunks = [c for c in chunks if c]
@@ -649,6 +672,11 @@ if __name__ == "__main__":
   isdata = False
   hcounter = None
   ntrueint_hist = None
+  # Post-Path-filter Σ genWeight (diagnostic). Not a full-sample hCounter when
+  # enableDimuonPreFilter=True — prefer GenWeightCounter (pre-filter) or external
+  # mcin.sumweights / --mc-sumweights for absolute σ×L normalization.
+  genweight_sum = 0.0
+  genweight_seen = False
   total_entries = 0
   file_entries: list[int] = []
   for fpath in input_files:
@@ -731,6 +759,14 @@ if __name__ == "__main__":
     if remaining is not None:
       remaining -= stop
 
+    # Sum genWeight over *all* events read (before DY / AN §6 selection).
+    # This is the MC denominator for w_i / Σw × σ × L in mcvsdata_fill.
+    if layout == "displacedv0" and hcounter is None:
+      gw = _sum_genweights(branches)
+      if gw is not None:
+        genweight_sum += gw
+        genweight_seen = True
+
     result = build_selected_trees(
       branches,
       layout=layout,
@@ -765,6 +801,27 @@ if __name__ == "__main__":
       )
     )
 
+  # Real hCounter comes from input (GenWeightCounter / upstream). Post-filter
+  # ΣgenWeight is written separately so fill does not treat it as full-sample Σw.
+  postfilter_hcounter = None
+  if hcounter is None and genweight_seen and not isdata:
+    postfilter_hcounter = _hcounter_from_sum(genweight_sum)
+    print(
+      "NOTE: no pre-filter hCounter in inputs; sum(genWeight) over {} ntuple "
+      "events (POST DimuonPreFilter if enabled) = {}. "
+      "Writing hCounter_postfilter only — for absolute σ×L use "
+      "mcin.sumweights / --mc-sumweights or resubmit MC with GenWeightCounter.".format(
+        total_entries if args.nevents <= 0 else min(args.nevents, total_entries),
+        genweight_sum,
+      )
+    )
+  elif layout == "displacedv0" and hcounter is None and not isdata:
+    print(
+      "WARNING: DisplacedV0 MC but no genWeight/_weight found; "
+      "hCounter will be missing (fill will fall back to sumweights=1 "
+      "unless mcin.sumweights / --mc-sumweights is set)."
+    )
+
   print("Writing trees to output file")
   with uproot.recreate(args.outputfile) as f:
     f["nimloth"] = _merge_tree_dicts(nimloth_chunks)
@@ -773,8 +830,11 @@ if __name__ == "__main__":
     f["telperion"] = _merge_tree_dicts(telperion_chunks)
     hcounter_out = _hist_for_write(hcounter)
     ntrueint_out = _hist_for_write(ntrueint_hist)
+    postfilter_out = _hist_for_write(postfilter_hcounter)
     if hcounter_out is not None:
       f["hCounter"] = hcounter_out
+    if postfilter_out is not None:
+      f["hCounter_postfilter"] = postfilter_out
     if ntrueint_out is not None:
       f["nTrueInteractions"] = ntrueint_out
 

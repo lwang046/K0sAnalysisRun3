@@ -204,14 +204,16 @@ python3 fitting/fitinvmass.py \
 
 ```bash
 cd $REPO/analysis
-# Edit example_input_run2024d.json: real v0sel paths + luminosity + MC xsec/nevents
-# (do not leave PLACEHOLDER_* or luminosity=1.0 for physics)
+# Edit example_input_run2024d.json: real v0sel paths.
+# Luminosity pb^-1 (default Muon 7703.3; alt Golden×D 7914.0) — see example_input_run2024d.md
+# DY xsection still TODO-VERIFY — override with --mc-xsection when XSDB/genXsec ready.
+# Full-sample Σw: --mc-sumweights (existing slim CRAB has no pre-filter hCounter).
 
 python3 mcvsdata_fill.py \
-  -i example_input_run2024d.json \
+  -i /afs/.../results/input_run2024d_afs.json \
   -t laurelin \
   -v ../fitting/variables/variable_ks_rpv.json \
-  -o /eos/.../C_delta2D_Run2024D.root \
+  -o /afs/.../results/C_delta2D_Run2024D.root \
   --bkgmode sideband \
   --sidevariable ../fitting/variables/variable_ks_invmass.json \
   --normmode range \
@@ -220,11 +222,15 @@ python3 mcvsdata_fill.py \
   --peak-halfwidth-frac 0.25 \
   --weightvar _weight \
   --ntrueintvar _nTrueInt \
-  --nopileup
+  --nopileup \
+  --data-lumi 7703.3 --mc-lumi 7703.3 \
+  --mc-xsection 2094.2 \
+  --mc-sumweights <FULL_SAMPLE_SUMW_OR_OMIT>
 ```
 
 Config: `config_ksvars.py` (Δ2D bins, sideband `_mass`, `normrange=[0,2]`).
 Writes `norm_scale`, `normshared_up/down`, optional `norm_scale_alt_upper_*` (CDTE-25).
+CLI overrides: `--data-lumi`, `--mc-lumi`, `--mc-xsection`, `--mc-sumweights` (also JSON keys `luminosity` / `xsection` / `sumweights`).
 
 
 ### J. SF export
@@ -232,10 +238,11 @@ Writes `norm_scale`, `normshared_up/down`, optional `norm_scale_alt_upper_*` (CD
 ```bash
 cd $REPO
 python3 scripts/make_sf_json.py \
-  -i /eos/.../C_delta2D_Run2024D.root \
-  -o /eos/.../C_delta2D_Run2024D.json \
-  --era Run2024D
-# Note: make_sf_json.py is still a stub until C hist exists — implement/fill after M7
+  -i /afs/.../results/C_delta2D_Run2024D.root \
+  -o /afs/.../results/C_delta2D_Run2024D.json \
+  --era Run2024D \
+  --correctionlib
+# Forms C = data/MC from *_nominal TH1s; optional .correctionlib.json
 # Record era + JSON path in conditions.md
 ```
 

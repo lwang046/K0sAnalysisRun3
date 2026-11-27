@@ -25,7 +25,9 @@ in `python/*.py`; pin exact strings here on the day of the first successful smok
 | MagField mode | `useESMagneticField=False` (OAE `3_8T` default) | Set `True` after MagField_cff + TransientTrackBuilder smoke (`esConsumes` MagField + TTBuilder) | `displacedV0_cfi.py` / docs/cmsrun-smoke-test.md |
 | Dimuon Path filter | `enableDimuonPreFilter=True` (2 medium, pT>30/25, \|mμμ−mZ\|<10) | Set `False` to debug without AN §5 pre-filter | production + smoke cfgs |
 | Package path | `$CMSSW_BASE/src/K0sAnalysis/DisplacedV0` | Symlink `ntuplizer/K0sAnalysis` → `src/K0sAnalysis` | docs/cmsrun-smoke-test.md |
-| DY σ (M>50, 13.6 TeV) | XSDB / genXsecAnalyzer | **TODO-VERIFY** — do not reuse 6077.22 pb; use **DYto2Mu** MLL>50 XS | |
+| DY σ (M>50, 13.6 TeV) | XSDB / genXsecAnalyzer | **TODO-VERIFY** — do not reuse 6077.22 pb; use **DYto2Mu** MLL>50 XS. Provisional JSON placeholder **2094.2 pb** (MATRIX NNLO per flavor, cmsdb) — override with `--mc-xsection` when XSDB/genXsec returns | 2026-11-27 |
+| Run2024D \(\mathcal{L}\) | brilcalc × BRIL normtag | **Muon cert 7.703298913 /fb** (7703.3 pb⁻¹) vs **Golden×D 7.913979054 /fb** (7914.0 pb⁻¹) — **user freeze pending**; fill default = Muon | lxplus 2026-11-27; CDTE-34 |
+| MC `hCounter` | `GenWeightCounter` pre-filter | Slim CRAB to date: **no** `hCounter` (post-filter `ΣgenWeight` ≠ full-sample). Refill: `--mc-sumweights` / JSON `sumweights`. Future CRAB: Path `genWeightCounter + dimuonPreFilter + ntuple` | CDTE-34 |
 | Δ2D bins / norm | method §2.6 / `analysis/config_ksvars.py` | bins `[0,1,2,3,5,7,11,16,22,30,40,60,90,120]` cm; `normrange=[0,2]` | Wired to laurelin `_RPV` |
 | `CRAB_STORAGE_SITE` | set on lxplus only | — | **Never invent a T2 in git** |
 

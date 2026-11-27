@@ -8,6 +8,8 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 `ntuplizer/heavyNeutrino/multilep` @ `2a132385`:
 - **V0Analyzer** — full Kalman body
 - **DimuonPreFilter** — lightweight AN §5 DY dimuon EDFilter (Path, ahead of ntuple)
+- **GenWeightCounter** — MC-only TH1 `hCounter` = ΣgenWeight **before** the Path filter
+  (required for absolute σ×L when `enableDimuonPreFilter=True`)
 - **TriggerAnalyzer** — configurable dimuon HLT OR (`hltPaths`, Mass3p8 baseline);
   stores `passDimuonHLT` only (no per-path `HLT_*` leaf)
 - **LeptonAnalyzer** — muon kinematics + `Muon_mediumId` + `Dimuon_mass/pt/y`
@@ -26,9 +28,10 @@ Ported from [LukaLambrecht/K0sAnalysis](https://github.com/LukaLambrecht/K0sAnal
 - Still dropped vs fat: unc/PCA/Iso/daughter-PxPyPz, unused muon leaves,
   `Muon_mass`, per-path HLT, full `Jet_*`
 
-Prefer Path `dimuonPreFilter + displacedV0Ntuple` so the vertex analyzer only
-runs on baseline Z events. After merging, **resubmit** CRAB — do **not** delete
-existing EOS files. Size estimate: `python3 scripts/estimate_ntuple_slim_factor.py`.
+Prefer Path `genWeightCounter + dimuonPreFilter + displacedV0Ntuple` (MC) so
+Σw is filled before the filter and the vertex analyzer only runs on baseline Z
+events. After merging, **resubmit** CRAB — do **not** delete existing EOS files.
+Size estimate: `python3 scripts/estimate_ntuple_slim_factor.py`.
 
 Full HNL `heavyNeutrino` stack (electrons/taus/Rochester/JEC sources/MET) is
 **not** required for the \(C(\Delta_{2D})\) path and was dropped.
